@@ -1,4 +1,4 @@
-cmake_minimum_version(VERSION 3.0)
+cmake_minimum_required(VERSION 3.0)
 project(carmcheats C)
 
 add_executable(carmhash
