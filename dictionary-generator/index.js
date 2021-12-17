@@ -20,7 +20,7 @@ const subjects = readData('subjects');
 const verbsRegular = readData('verbs_regular');
 
 const n =
-  adjectives.length * articlesPrepositions.length * (nouns.length * 2) *
+  adjectives.length * articlesPrepositions.length * nouns.length *
   sentenceStructures.length * subjects.length * verbsRegular.length;
 
 console.log(n + ' combinations');
