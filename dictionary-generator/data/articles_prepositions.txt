@@ -1,9 +1,11 @@
 ! split last
 # article [rule]
 the
+of
 an firstvowel
 a !firstvowel
 to
 tothe
+ofthe
 toan firstvowel
 toa !firstvowel

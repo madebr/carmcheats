@@ -12,9 +12,7 @@ const vowelCheck = {
 
 const adjectives = readData('adjectives');
 const articlesPrepositions = readData('articles_prepositions');
-const nouns = readData('nouns').reduce((acc, noun) => {
-  return [...acc, noun, pluralize(noun)];
-}, []);
+const nouns = readData('nouns');
 const sentenceStructures = readData('sentence_structures');
 const subjects = readData('subjects');
 const verbsRegular = readData('verbs_regular');
@@ -29,12 +27,18 @@ const maxSize = 1000000000;
 const buffer = [];
 for (let i = 0; i < maxSize; i++) {
   buffer.push(generateRandomSentence());
-
-  if (buffer.length > 100000) {
+  console.log(buffer);
+  if (buffer.length > 250000) {
     fs.appendFileSync(path.join(__dirname, 'out.dic'), buffer.join('\r\n'));
     buffer.length = 0;
     console.log(`Flushed dict buffer (${Math.round(i / maxSize * 100)}% complete)`);
   }
+}
+
+if (buffer.length > 0) {
+  fs.appendFileSync(path.join(__dirname, 'out.dic'), buffer.join('\r\n'));
+  buffer.length = 0;
+  console.log(`Flushed dict buffer (Done!)`);
 }
 
 function generateRandomSentence() {
