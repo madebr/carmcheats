@@ -27,7 +27,6 @@ const maxSize = 1000000000;
 const buffer = [];
 for (let i = 0; i < maxSize; i++) {
   buffer.push(generateRandomSentence());
-  console.log(buffer);
   if (buffer.length > 250000) {
     fs.appendFileSync(path.join(__dirname, 'out.dic'), buffer.join('\r\n'));
     buffer.length = 0;
