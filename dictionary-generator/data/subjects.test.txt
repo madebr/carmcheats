@@ -1,0 +1,3 @@
+! split last
+# subject [conjugation]
+i
