@@ -29,7 +29,7 @@ def main():
     # Then open the target database
     if args.write:
         dest = args.write if isinstance(args.write, str) else args.database
-        print(f"Write db to {dest}")
+        print(f"Writing db to {dest} ({len(lines)} entries)")
         dest_file = open(dest, "w")
     else:
         dest_file = sys.stdout

@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
 import argparse
-import algorithm
 import sys
+
+from carmcheat.algorithm import calc_hash, hash2str
 
 
 def main():
@@ -15,7 +16,7 @@ def main():
     for line_i, line in enumerate(open(args.database, "r").readlines()):
         nb_total += 1
         db_hashcode, text = line.strip().rsplit(":", 1)
-        realhashcode = algorithm.hash2str(algorithm.calc_hash(text))
+        realhashcode = hash2str(calc_hash(text))
         if db_hashcode != realhashcode:
             print(f"{args.database}:{line_i} '{text}' hashes to {realhashcode} (not {db_hashcode})", file=sys.stderr)
             nb_bad += 1

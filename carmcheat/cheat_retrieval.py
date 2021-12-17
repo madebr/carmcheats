@@ -2,7 +2,7 @@
 import argparse
 import z3
 
-import algorithm
+from carmcheat.algorithm import hash2str, str2hash
 
 
 def char_to_val(x):
@@ -44,11 +44,11 @@ def run(target_codes, length, crib, database, database_filename=None):
             s.add(z3.Or(*[k != char_to_val(dbitem[ki]) for ki, k in enumerate(keycodes)]))
         while (t := s.check()) == z3.sat:
             cleartext = "".join(chr(s.model()[k].as_long() + ord('a') - 22) for k in keycodes)
-            print(f"{algorithm.hash2str(target_codes)}:{cleartext}")
+            print(f"{hash2str(target_codes)}:{cleartext}")
             s.add(z3.Or(*[k != s.model()[k].as_long() for k in keycodes]))
             if database_filename:
                 with open(database_filename, "a") as fn:
-                    fn.write(f"{algorithm.hash2str(target_codes)}:{cleartext}\n")
+                    fn.write(f"{hash2str(target_codes)}:{cleartext}\n")
         if not crib:
             break  # don't needlessly loop when no crib
 
@@ -65,7 +65,7 @@ def main():
     hash_target_str = args.target.strip()
 
     try:
-        target_codes = algorithm.str2hash(hash_target_str)
+        target_codes = str2hash(hash_target_str)
     except ValueError:
         parser.error("Invalid target. It needs to be in the XXXXXXXX:XXXXXXXX format.")
 

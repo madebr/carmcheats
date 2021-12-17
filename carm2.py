@@ -2,7 +2,7 @@
 import argparse
 import sys
 
-import algorithm
+from carmcheat.algorithm import calc_hash, hash2str
 
 
 ALL_CHEATS = (
@@ -110,10 +110,10 @@ def main():
 
     for i, (code, cheat, action) in enumerate(ALL_CHEATS):
         if cheat:
-            calc_code = algorithm.calc_hash(cheat)
+            calc_code = calc_hash(cheat)
             if calc_code != code:
-                print(f"WARNING! cheat invalid: expected {algorithm.hash2str(code)}, got {algorithm.hash2str(calc_code)}", file=sys.stderr)
-        print(f"{i:>2}: {algorithm.hash2str(code)} {cheat if cheat else '':<35} {action if action else ''}")
+                print(f"WARNING! cheat invalid: expected {hash2str(code)}, got {hash2str(calc_code)}", file=sys.stderr)
+        print(f"{i:>2}: {hash2str(code)} {cheat if cheat else '':<35} {action if action else ''}")
 
 
 if __name__ == "__main__":
