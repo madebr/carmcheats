@@ -96,7 +96,7 @@ def main():
             print(f"{hash_target_str}:{entry}")
 
     for length in args.lengths:
-        if not args.force and (length < cheat_min_length or cheat_max_length < length):
+        if not args.force and not (cheat_min_length <= length <= cheat_max_length):
             print(f"Length={length} is out of range [{cheat_min_length},{cheat_max_length}]: skipping search (use --force to override)")
             continue
 

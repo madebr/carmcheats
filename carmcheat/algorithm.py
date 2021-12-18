@@ -20,17 +20,28 @@ def number2char(number: int) -> str:
     return chr(number + ord('a') - 22)
 
 
+def hash_init() -> typing.Tuple[int, int, int]:
+    return 0, 0, 0
+
+
+def hash_update(code1: int, code2: int, sum: int, char: str) -> typing.Tuple[int, int, int]:
+    lc = char2number(char)
+    sum = (sum + lc) % (1 << 32)
+    code1 = (code1 + (lc << 11)) % (1 << 32)
+    code1 = ((code1 >> 17) + (code1 << 4)) % (1 << 32)
+    code2 = ((code2 >> 29) + (code2 << 3) + lc * lc) % (1 << 32)
+    return code1, code2, sum
+
+
+def hash_final(code1: int, code2: int, sum: int):
+    return ((code1 >> 11) + (sum << 21)) % (1 << 32), code2
+
+
 def calc_hash(text: str) -> typing.Tuple[int, int]:
-    s, c1, c2 = 0, 0, 0
+    state = hash_init()
     for char in text:
-        lc = char2number(char)
-        s = (s + lc) % (1 << 32)
-        c1 = (c1 + (lc << 11)) % (1 << 32)
-        c1 = ((c1 >> 17) + (c1 << 4)) % (1 << 32)
-        c2 = ((c2 >> 29) + (c2 << 3) + lc * lc) % (1 << 32)
-    h1 = ((c1 >> 11) + (s << 21)) % (1 << 32)
-    h2 = c2
-    return h1, h2
+        state = hash_update(*state, char)
+    return hash_final(*state)
 
 
 def hash2str(hash: typing.Tuple[int, int]) -> str:
