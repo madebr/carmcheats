@@ -31,6 +31,8 @@ def recursive_crib_iterator(result, remaining_cribs):
 def run(target_hash, length, crib, database, database_filename=None, check_intermediates=True, force=False):
     min_length, max_length = cheat_length_range(target_hash)
     for offset in range(length - len(crib) + 1):
+        if crib:
+            print(f"Trying crib offset {offset} ({100 * offset / (length - len(crib) + 1):2.1f}%)")
         s = z3.Solver()
 
         # Create Z3 keycode objects
