@@ -65,7 +65,7 @@ int main() {
 				}
 				break;
 			default:
-				std::cerr << "! Unrecognized sentence structure: " << sentenceStructure->value << std::endl;
+				std::cerr << "! Unrecognized sentence structure: " << sentenceStructure->value << '\n';
 				return -1;
 			}
 		}
@@ -120,7 +120,7 @@ std::vector<StringWithMode> readDataFile(const char* fileName) {
 		}
 	}
 	else {
-		std::cerr << "! Could not open file: " << fileName << std::endl;;
+		std::cerr << "! Could not open file: " << fileName << '\n';
 	}
 
 	return lines;
