@@ -37,18 +37,19 @@ This requires [z3-solver package](https://pypi.org/project/z3-solver/).
 
 ```cmd
 $ python -m carmcheat.cheat_retrieval -h
-usage: cheat_retrieval.py [-h] [--crib CRIB] [--database DB] target length
+usage: cheat_retrieval.py [-h] [--crib CRIB] [--database DB] [--force] target lengths [lengths ...]
 
 Use SAT solver to find cheat codes hashing to a target
 
 positional arguments:
   target         Target hash (format=XXXXXXXX:XXXXXXXX), where X is hexadecimal
-  length         Length of cheat code
+  lengths        Length(s) of cheat code to check/find
 
 options:
   -h, --help     show this help message and exit
   --crib CRIB    Find only cheat codes that contain the 'crib'
   --database DB  Append found cheat codes to this database
+  --force        Force search
 ```
 
 Example usage:
