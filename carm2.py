@@ -122,10 +122,12 @@ def main():
             min_pw, max_pw = cheat_length_range(code)
             factor = (len(cheat) - min_pw) / (max_pw - min_pw)
             if final:
+                len_str = f"{len(cheat):<2}"
                 factor_str = f"{factor*100:.1f}"
             else:
+                len_str = f"? "
                 factor_str = f"??.?"
-            display_data = f"len={len(cheat):<2} min_pw={min_pw:<2} max_pw={max_pw:<2} factor={factor_str}"
+            display_data = f"len={len_str} min_pw={min_pw:<2} max_pw={max_pw:<2} factor={factor_str}"
 
         print(f"{i:>2}: {hash2str(code)} {cheat if cheat else '':<35} {display_data}")
 
