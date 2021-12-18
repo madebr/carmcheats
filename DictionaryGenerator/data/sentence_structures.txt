@@ -1,0 +1,15 @@
+# markers: s = subject, n = noun, v = verb, a = adjective, r = article
+an
+aan
+ran
+raan
+svrn
+svran
+svraan
+svan
+svaan
+van
+vaan
+vrn
+vran
+vraan
