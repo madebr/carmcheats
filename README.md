@@ -60,10 +60,12 @@ options:
 Example usage:
 ```cmd
 $ python -m carmcheat.cheat_retrieval 29cee8d4:8830c0d6 10 --database dummy.potfile
-Looking for cheat codes hashing to 29cee8d4:8830c0d6:
-Starting search...
+Looking for cheat codes hashing to 29cee8d4:8830c0d6
+Cheat length range: [8, 15]
+Found 0 entries in the database.
+Trying crib mask '__________'
 29cee8d4:8830c0d6:helloworld
-Search finished
+Search finished (32.5s)
 ```
 
 ## Sort and remove duplicates from a database
