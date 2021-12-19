@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import argparse
-import sys
 import time
 import z3
 
@@ -59,11 +58,11 @@ def run(target_hash, length, crib, database, database_filename=None, check_inter
         # Apply the Carmageddon hashing algorithm to the keycodes
         code1 = code2 = sum = z3.BitVecVal(0, 32)
         for k_i, k in enumerate(keycodes):
-            # One step of the hash
             if check_intermediates and (force or min_length <= k_i <= max_length):
                 # Calculate the final hash for each intermediate key code ==> string is shorter
                 final = z3_hash_final(code1, code2, sum)
                 intermediates.append(final)
+            # One step of the hash
             code1, code2, sum = z3_hash_step(code1, code2, sum, k)
 
         # Create the final hash, which should be added to the intermediates list anyways
@@ -151,13 +150,16 @@ def main():
             print(f"Length={args.length} is out of range [{cheat_min_length},{cheat_max_length}] => skipping search (use --force to override)")
             return
 
+    time_start = time.time()
     result = run(target_hash, args.length, args.crib, database, database_filename=args.database,
                  check_intermediates=args.intermediates, force=args.force)
+    time_finish = time.time()
+    time_delta = time_finish - time_start
 
     if result == 0:
-        print(f"Search finished")
+        print(f"Search finished ({time_delta:.1f}s)")
     else:
-        print(f"Search aborted")
+        print(f"Search aborted ({time_delta:.1f}s)")
     return result
 
 
