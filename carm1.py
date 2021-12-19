@@ -5,7 +5,7 @@ from carmcheat.analyze import run_analysis
 
 ALL_CHEATS = (
     ((0xa11ee75d, 0xf805eddd), None, "?", False),
-    ((0x564e78b9, 0x99155115), None, "?", False),
+    ((0x564e78b9, 0x99155115), "ibetyoucantprintcunt", "Edit mode", True),
     ((0x1f47e5e8, 0xa715222c), "molemode", "?", True),
     ((0x39d4c4c4, 0xf0a2c5b0), "mrcursorscool", "Final lap", True),
     ((0x2654216c, 0xf8256d15), "givemelard", "More money", True),
@@ -40,7 +40,7 @@ ALL_CHEATS = (
     ((0x2aca3190, 0xd9004f25), "hamstersex", "Blind pedestrians", True),
     ((0x37c1f613, 0xb7faf351), "naughtytorty", "Un-dead pedestrians", True),
     ((0x2ba3f603, 0x29f2425c), "icecreamhole", "5 recovery vouchers", True),
-    ((0x416eff61, 0x2667df4b), None, "?", False),
+    ((0x416eff61, 0x2667df4b), "kneepithappiness", "Granite car", True),
     ((0x2554125c, 0x393ca35d), "intheloft", "Drug mode", True),
     ((0x3fff84d5, 0x84a42df4), "boysfromthebush", "Better grip", True),
     ((0x37e83018, 0xb609aee6), "tramsaresuper", "Harvesting pedestrians", True),
@@ -48,7 +48,7 @@ ALL_CHEATS = (
     ((0x30a19fab, 0x2b0c2782), "rabbitdreamer", "Moon physics", True),
     ((0x2212d981, 0x90e8cf51), "joyrider", "Access to all cars for network play", True),
     ((0x27645433, 0x758f0015), "kevwozear", "Access to all cars and levels", True),
-    ((0x33f75455, 0xc10aaaf2), None, "?", False),
+    ((0x33f75455, 0xc10aaaf2), "iwanttofiddle", "Decrypt game data files", True),
 )
 
 

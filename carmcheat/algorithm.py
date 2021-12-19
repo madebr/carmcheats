@@ -13,7 +13,7 @@ def cheat_length_range(hash: typing.Tuple[int, int]) -> typing.Tuple[int, int]:
 
 
 def cheat_length_guess(hash: typing.Tuple[int, int]) -> int:
-    return code[0] >> 26
+    return hash[0] >> 26
 
 
 def char2number(char: str) -> int:
