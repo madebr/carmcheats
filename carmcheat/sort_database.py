@@ -24,7 +24,8 @@ def main():
     args = parser.parse_args()
 
     # Read all entries from the source database, and close it
-    lines = sorted(set(line.strip() for line in open(args.database, "r").readlines() if line.strip()), key=DbLine)
+    with open(args.database, "r") as file:
+        lines = sorted(set(line.strip() for line in file.readlines() if line.strip()), key=DbLine)
 
     # Then open the target database
     if args.write:
@@ -37,6 +38,10 @@ def main():
     # Finally, write all entries to the target database
     for line in lines:
         print(line, file=dest_file)
+
+    dest_file.close()
+
+    return 0
 
 
 if __name__ == "__main__":

@@ -57,11 +57,21 @@ def str2hash(text: str) -> typing.Tuple[int, int]:
 
 def main():
     parser = argparse.ArgumentParser(description="Hash some cheat codes")
+    parser.add_argument("--steps", action="store_true", help="Show the steps")
     parser.add_argument("cheatcodes", metavar="CHEATCODE", nargs="+", help="Cheat code to hash")
     args = parser.parse_args()
 
     for cheatcode in args.cheatcodes:
-        print(f"{hash2str(calc_hash(cheatcode))}:{cheatcode}")
+        if args.steps:
+            state = hash_init()
+            print(f" code1={state[0]:032b}  code2={state[1]:032b} sum={state[2]:032b}")
+            for c in cheatcode:
+                state = hash_update(*state, c)
+                print(f" code1={state[0]:032b}  code2={state[1]:032b} sum={state[2]:032b} char={char2number(c):08b} ({c})")
+            final = hash_final(*state)
+            print(f"final1={final[0]:032b} final2={final[1]:032b}")
+        else:
+            print(f"{hash2str(calc_hash(cheatcode))}:{cheatcode}")
 
 
 if __name__ == "__main__":
