@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import re
 import time
 import z3
 
@@ -23,16 +24,28 @@ def z3_hash_final(code1, code2, sum):
     return z3.LShR(code1, 11) + (sum << 21), code2
 
 
-def recursive_crib_iterator(result, remaining_cribs):
+def recursive_crib_iterator(mask, remaining_cribs):
     if not remaining_cribs:
-        return result
+        yield mask
+        return
+    this_crib = remaining_cribs[0]
+    other_cribs = remaining_cribs[1:]
+    for pos_i in range(len(mask) - len(this_crib) + 1):
+        if not any(mask[pos_i:pos_i+len(this_crib)]):
+            mask[pos_i:pos_i+len(this_crib)] = [c for c in this_crib]
+            yield from recursive_crib_iterator(mask, other_cribs)
+            mask[pos_i:pos_i+len(this_crib)] = [None for _ in this_crib]
 
 
-def run(target_hash, length, crib, database, database_filename=None, check_intermediates=True, force=False):
+def crib_iterator(cribs, length):
+    mask_result = [None] * length
+    return recursive_crib_iterator(mask_result, cribs)
+
+
+def run(target_hash, length, cribs, database, database_filename=None, check_intermediates=True, force=False):
     min_length, max_length = cheat_length_range(target_hash)
-    for offset in range(length - len(crib) + 1):
-        if crib:
-            print(f"Trying crib offset {offset} ({100 * offset / (length - len(crib) + 1):2.1f}%)")
+    for crib_mask in crib_iterator(cribs, length):
+        print(f"Trying crib mask '{''.join(c if c else '_' for c in crib_mask)}'")
         s = z3.Solver()
 
         # Create Z3 keycode objects
@@ -45,8 +58,9 @@ def run(target_hash, length, crib, database, database_filename=None, check_inter
             s.add(k < 22 + 26)
 
         # Apply the "crib" to the input characters
-        for c, k in zip(crib, keycodes[offset:]):
-            s.add(k == char_to_val(c))
+        for k, c in zip(keycodes, crib_mask):
+            if c:
+                s.add(k == char_to_val(c))
 
         # Exclude all items from the database
         for dbitem in database:
@@ -96,8 +110,6 @@ def run(target_hash, length, crib, database, database_filename=None, check_inter
                     fn.write(f"{hash2str(target_hash)}:{cleartext}\n")
         if t == z3.unknown:
             return 1
-        if not crib:
-            break
     return 0
 
 
@@ -106,12 +118,14 @@ def main():
                                      description="Use SAT solver to find cheat codes hashing to a target")
     parser.add_argument("target", help="Target hash (format=XXXXXXXX:XXXXXXXX), where X is hexadecimal")
     parser.add_argument("length", type=int, help="Length(s) of cheat code to check/find")
-    parser.add_argument("--crib", default="", help="Find only cheat codes that contain the 'crib'")
+    parser.add_argument("--cribs", default=None, help="Find only cheat codes that contain the 'cribs'")
     parser.add_argument("--database", metavar="DB", help="Append found cheat codes to this database")
     parser.add_argument("--intermediates", action="store_true", help="Match intermediates")
     parser.add_argument("--force", action="store_true", help="Force search")
     parser.add_argument("--seed", nargs=argparse.OPTIONAL, const="time", help="Initial z3 seed")
     args = parser.parse_args()
+
+    cribs = re.split("[:,;]", args.cribs) if args.cribs else []
 
     if args.seed:
         if args.seed == "time":
@@ -151,7 +165,7 @@ def main():
             return
 
     time_start = time.time()
-    result = run(target_hash, args.length, args.crib, database, database_filename=args.database,
+    result = run(target_hash, args.length, cribs, database, database_filename=args.database,
                  check_intermediates=args.intermediates, force=args.force)
     time_finish = time.time()
     time_delta = time_finish - time_start
