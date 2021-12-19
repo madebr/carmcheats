@@ -121,7 +121,7 @@ def main():
                 z3_seed = int(args.seed)
             except ValueError:
                 parser.error("Seed value must be a decimal integer")
-            z3.set_param("smt.random_seed", z3_seed)
+        z3.set_param("smt.random_seed", z3_seed)
 
     hash_target_str = args.target.strip()
 
