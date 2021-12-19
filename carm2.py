@@ -121,14 +121,16 @@ def main():
         elif args.display == "hashstats":
             min_pw, max_pw = cheat_length_range(code)
             factor = (len(cheat) - min_pw) / (max_pw - min_pw)
+            guess_len = code[0] >> 26
             if final:
                 len_str = f"{len(cheat):<2}"
                 factor_str = f"{factor*100:3.1f}%"
             else:
                 len_str = f"?"
                 factor_str = f"?"
-            guess_len = code[0] >> 26
-            display_data = f"len={len_str:2s} guess_len={guess_len:<2} min_pw={min_pw:<2} max_pw={max_pw:<2} factor={factor_str:5s}"
+            guess_factor = (guess_len - min_pw) / (max_pw - min_pw)
+            guess_factor_str = f"{guess_factor*100:3.1f}%"
+            display_data = f"len={len_str:2s} guess_len={guess_len:<2} min_pw={min_pw:<2} max_pw={max_pw:<2} f={factor_str:5s} gf={guess_factor_str:5s}"
 
         print(f"{i:>2}: {hash2str(code)} {cheat if cheat else '':<35} {display_data}")
 
