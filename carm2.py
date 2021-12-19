@@ -1,8 +1,6 @@
 #!/usr/bin/env python
-import argparse
-import sys
 
-from carmcheat.algorithm import calc_hash, hash2str, cheat_length_range
+from carmcheat.analyze import run_analysis
 
 
 ALL_CHEATS = (
@@ -105,34 +103,7 @@ ALL_CHEATS = (
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Print a list of all known cheat codes with hash and its action")
-    parser.add_argument("--display", choices=["action", "hashstats"], default="action",
-                        help="What information to print for each cheat code")
-
-    args = parser.parse_args()
-
-    for i, (code, cheat, action, final) in enumerate(ALL_CHEATS):
-        if cheat:
-            calc_code = calc_hash(cheat)
-            if calc_code != code:
-                print(f"WARNING! cheat invalid: expected {hash2str(code)}, got {hash2str(calc_code)}", file=sys.stderr)
-        if args.display == "action":
-            display_data = f"{action if action else ''}"
-        elif args.display == "hashstats":
-            min_pw, max_pw = cheat_length_range(code)
-            factor = (len(cheat) - min_pw) / (max_pw - min_pw)
-            guess_len = code[0] >> 26
-            if final:
-                len_str = f"{len(cheat):<2}"
-                factor_str = f"{factor*100:3.1f}%"
-            else:
-                len_str = f"?"
-                factor_str = f"?"
-            guess_factor = (guess_len - min_pw) / (max_pw - min_pw)
-            guess_factor_str = f"{guess_factor*100:3.1f}%"
-            display_data = f"len={len_str:2s} guess_len={guess_len:<2} min_pw={min_pw:<2} max_pw={max_pw:<2} f={factor_str:5s} gf={guess_factor_str:5s}"
-
-        print(f"{i:>2}: {hash2str(code)} {cheat if cheat else '':<35} {display_data}")
+    return run_analysis(ALL_CHEATS)
 
 
 if __name__ == "__main__":

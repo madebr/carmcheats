@@ -145,8 +145,8 @@ def main():
         parser.error("Invalid target. It needs to be in the XXXXXXXX:XXXXXXXX format.")
 
     cheat_min_length, cheat_max_length = cheat_length_range(target_hash)
-    print(f"Looking for cheat codes hashing to {hash_target_str}")
-    print(f"Cheat length range: [{cheat_min_length}, {cheat_max_length}]")
+    print(f"Looking for cheat codes hashing to {hash_target_str}. Maximum length: {args.length}")
+    print(f"Cheat length range: [{cheat_min_length}, {cheat_max_length}].")
 
     cribs = re.split("[:,;]", args.cribs) if args.cribs else []
     if cribs:
