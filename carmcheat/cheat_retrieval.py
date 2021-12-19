@@ -5,7 +5,8 @@ import re
 import time
 import z3
 
-from carmcheat.algorithm import hash2str, str2hash, cheat_length_range, hash_init, hash_update, hash_final, char2number, number2char
+from carmcheat.algorithm import hash2str, str2hash, cheat_length_guess, cheat_length_range, hash_init, \
+    hash_update, hash_final, char2number, number2char
 
 
 def char_to_val(x):
@@ -146,7 +147,7 @@ def main():
 
     cheat_min_length, cheat_max_length = cheat_length_range(target_hash)
     print(f"Looking for cheat codes hashing to {hash_target_str}. Maximum length: {args.length}")
-    print(f"Cheat length range: [{cheat_min_length}, {cheat_max_length}].")
+    print(f"Heuristics: length range=[{cheat_min_length}, {cheat_max_length}] length={cheat_length_guess(target_hash)}")
 
     cribs = re.split("[:,;]", args.cribs) if args.cribs else []
     if cribs:

@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from carmcheat.algorithm import calc_hash, hash2str, cheat_length_range
+from carmcheat.algorithm import calc_hash, hash2str, cheat_length_guess, cheat_length_range
 
 
 def run_analysis(all_cheats):
@@ -20,7 +20,7 @@ def run_analysis(all_cheats):
             display_data = f"{action if action else ''}"
         elif args.display == "hashstats":
             min_pw, max_pw = cheat_length_range(code)
-            guess_len = code[0] >> 26
+            guess_len = cheat_length_guess(code)
             if final:
                 factor = (len(cheat) - min_pw) / (max_pw - min_pw)
                 len_str = f"{len(cheat):<2}"

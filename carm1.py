@@ -53,6 +53,7 @@ ALL_CHEATS = (
 
 
 def main():
+    print("Carmageddon 1 cheat table:")
     return run_analysis(ALL_CHEATS)
 
 
