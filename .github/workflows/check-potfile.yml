@@ -1,0 +1,23 @@
+name: Check potfile
+
+on:
+  pull_request:
+  push:
+
+jobs:
+  verify-potfile:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+      - name: 'Sort c2.potfile'
+        run: |
+          python -m carmcheat.sort_database c2.potfile --write
+      - name: 'Verify c2.potfile'
+        run: |
+          python -m carmcheat.verify_database c2.potfile
+      - name: 'Make sure that sort + verification did not introduce any changes'
+        run: |
+          git diff --exit-code
