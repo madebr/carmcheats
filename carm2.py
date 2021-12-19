@@ -123,11 +123,12 @@ def main():
             factor = (len(cheat) - min_pw) / (max_pw - min_pw)
             if final:
                 len_str = f"{len(cheat):<2}"
-                factor_str = f"{factor*100:.1f}"
+                factor_str = f"{factor*100:3.1f}%"
             else:
-                len_str = f"? "
-                factor_str = f"??.?"
-            display_data = f"len={len_str} min_pw={min_pw:<2} max_pw={max_pw:<2} factor={factor_str}"
+                len_str = f"?"
+                factor_str = f"?"
+            guess_len = code[0] >> 26
+            display_data = f"len={len_str:2s} guess_len={guess_len:<2} min_pw={min_pw:<2} max_pw={max_pw:<2} factor={factor_str:5s}"
 
         print(f"{i:>2}: {hash2str(code)} {cheat if cheat else '':<35} {display_data}")
 
