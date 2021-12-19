@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import time
 import z3
 
 from carmcheat.algorithm import hash2str, str2hash, cheat_length_range, hash_init, hash_update, hash_final
@@ -57,27 +58,26 @@ def run(target_hash, length, crib, database, database_filename=None, check_inter
 
         # Apply the Carmageddon hashing algorithm to the keycodes
         code1 = code2 = sum = z3.BitVecVal(0, 32)
-        for k_i, k in enumerate(keycodes, 1):
+        for k_i, k in enumerate(keycodes):
             # One step of the hash
-            code1, code2, sum = z3_hash_step(code1, code2, sum, k)
             if check_intermediates and (force or min_length <= k_i <= max_length):
                 # Calculate the final hash for each intermediate key code ==> string is shorter
                 final = z3_hash_final(code1, code2, sum)
                 intermediates.append(final)
+            code1, code2, sum = z3_hash_step(code1, code2, sum, k)
 
-        if intermediates:
-            # Generate a success when an intermediate hash matches the target hash
-            s.add(z3.Or(*[z3.And(intermediate[0] == target_hash[0], intermediate[1] == target_hash[1]) for intermediate in intermediates]))
-        else:
-            # Generate a success when the final hash matches the target hash
-            final = z3_hash_final(code1, code2, sum)
-            s.add(z3.And(final[0] == target_hash[0], final[1] == target_hash[1]))
+        # Create the final hash, which should be added to the intermediates list anyways
+        final = z3_hash_final(code1, code2, sum)
+        intermediates.append(final)
+
+        # Generate a success when an intermediate hash matches the target hash
+        s.add(z3.Or(*[z3.And(intermediate[0] == target_hash[0], intermediate[1] == target_hash[1]) for intermediate in intermediates]))
 
         while (t := s.check()) == z3.sat:
             full_cleartext = "".join(chr(s.model()[k].as_long() + ord('a') - 22) for k in keycodes)
             if check_intermediates:
                 state = hash_init()
-                for c_i, char in enumerate(full_cleartext, 1):
+                for c_i, char in enumerate(full_cleartext):
                     state = hash_update(*state, char)
                     final = hash_final(*state)
                     if final == target_hash:
@@ -85,9 +85,8 @@ def run(target_hash, length, crib, database, database_filename=None, check_inter
                         excluded_keycodes = [k for k in keycodes[:c_i]]
                         break
                 else:
-                    print("Error: no intermediate hash matches the target hash!", file=sys.stderr)
-                    cleartext = full_cleartext
-                    excluded_keycodes = keycodes
+                    cleartext = ""
+                    excluded_keycodes = []
             else:
                 cleartext = full_cleartext
                 excluded_keycodes = keycodes
@@ -109,7 +108,18 @@ def main():
     parser.add_argument("--database", metavar="DB", help="Append found cheat codes to this database")
     parser.add_argument("--intermediates", action="store_true", help="Match intermediates")
     parser.add_argument("--force", action="store_true", help="Force search")
+    parser.add_argument("--seed", nargs=argparse.OPTIONAL, const="time", help="Initial z3 seed")
     args = parser.parse_args()
+
+    if args.seed:
+        if args.seed == "time":
+            z3_seed = int(time.time())
+        else:
+            try:
+                z3_seed = int(args.seed)
+            except ValueError:
+                parser.error("Seed value must be a decimal integer")
+            z3.set_param("smt.random_seed", z3_seed)
 
     hash_target_str = args.target.strip()
 
@@ -138,7 +148,7 @@ def main():
             print(f"{hash_target_str}:{entry}")
 
     if not args.force:
-        if not args.intermediates and not cheat_min_length < args.length < cheat_max_length:
+        if not args.intermediates and not cheat_min_length <= args.length <= cheat_max_length:
             print(f"Length={args.length} is out of range [{cheat_min_length},{cheat_max_length}] => skipping search (use --force to override)")
             return
 
