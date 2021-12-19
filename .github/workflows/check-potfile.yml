@@ -12,11 +12,13 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.x'
-      - name: 'Sort c2.potfile'
+      - name: 'Sort and check c1.potfile'
         run: |
-          python -m carmcheat.sort_database c2.potfile --write
-      - name: 'Verify c2.potfile'
+          python -m carmcheat.sort_database c1.potfile
+          python -m carmcheat.verify_database c1.potfile
+      - name: 'Sort and check c2.potfile'
         run: |
+          python -m carmcheat.sort_database c2.potfile
           python -m carmcheat.verify_database c2.potfile
       - name: 'Make sure that sort + verification did not introduce any changes'
         run: |
