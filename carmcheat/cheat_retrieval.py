@@ -51,7 +51,7 @@ def run(target_hash, length, crib, database, database_filename=None, check_inter
 
         # Exclude all items from the database
         for dbitem in database:
-            s.add(z3.Or(*[k != char_to_val(dbitem[ki]) for ki, k in enumerate(keycodes)]))
+            s.add(z3.Or(*[kc != char_to_val(dbi_char) for dbi_char, kc in zip(dbitem, keycodes)]))
 
         # Store all intermediate hash results in this list
         intermediates = []
@@ -78,14 +78,14 @@ def run(target_hash, length, crib, database, database_filename=None, check_inter
             if check_intermediates:
                 state = hash_init()
                 for c_i, char in enumerate(full_cleartext):
-                    state = hash_update(*state, char)
                     final = hash_final(*state)
                     if final == target_hash:
                         cleartext = full_cleartext[:c_i]
                         excluded_keycodes = [k for k in keycodes[:c_i]]
                         break
+                    state = hash_update(*state, char)
                 else:
-                    cleartext = ""
+                    cleartext = full_cleartext
                     excluded_keycodes = []
             else:
                 cleartext = full_cleartext
@@ -95,8 +95,11 @@ def run(target_hash, length, crib, database, database_filename=None, check_inter
             if database_filename:
                 with open(database_filename, "a") as fn:
                     fn.write(f"{hash2str(target_hash)}:{cleartext}\n")
+        if t == z3.unknown:
+            return 1
         if not crib:
-            break  # don't needlessly loop when no crib
+            break
+    return 0
 
 
 def main():
@@ -128,34 +131,34 @@ def main():
     except ValueError:
         parser.error("Invalid target. It needs to be in the XXXXXXXX:XXXXXXXX format.")
 
+    cheat_min_length, cheat_max_length = cheat_length_range(target_hash)
+    print(f"Cheat length range: [{cheat_min_length}, {cheat_max_length}]")
+    print(f"Looking for cheat codes hashing to {hash_target_str}")
+
     database = []
     if args.database:
         try:
             for line in open(args.database, "r").readlines():
                 hash_str, cleartext = line.strip().rsplit(":", 1)
-                if hash_str == hash_target_str and len(cleartext) == args.length:
+                if hash_str == hash_target_str:# and len(cleartext) <= args.length if args.intermediates else len(cleartext) == args.length:
                     database.append(cleartext)
         except FileNotFoundError:
             pass
-
-    cheat_min_length, cheat_max_length = cheat_length_range(target_hash)
-    print(f"Cheat length range: [{cheat_min_length}, {cheat_max_length}]")
-    print(f"Looking for cheat codes hashing to {hash_target_str}")
-
-    if database:
-        print(f"Found {len(database)} entries in the database:")
-        for entry in database:
-            print(f"{hash_target_str}:{entry}")
+        print(f"Found {len(database)} entries in the database.")
 
     if not args.force:
         if not args.intermediates and not cheat_min_length <= args.length <= cheat_max_length:
             print(f"Length={args.length} is out of range [{cheat_min_length},{cheat_max_length}] => skipping search (use --force to override)")
             return
 
-    run(target_hash, args.length, args.crib, database, database_filename=args.database,
-        check_intermediates=args.intermediates, force=args.force)
+    result = run(target_hash, args.length, args.crib, database, database_filename=args.database,
+                 check_intermediates=args.intermediates, force=args.force)
 
-    print(f"Search finished")
+    if result == 0:
+        print(f"Search finished")
+    else:
+        print(f"Search aborted")
+    return result
 
 
 if __name__ == "__main__":
