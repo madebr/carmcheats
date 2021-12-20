@@ -145,10 +145,6 @@ def main():
     except ValueError:
         parser.error("Invalid target. It needs to be in the XXXXXXXX:XXXXXXXX format.")
 
-    cheat_min_length, cheat_max_length = cheat_length_range(target_hash)
-    print(f"Looking for cheat codes hashing to {hash_target_str}. Maximum length: {args.length}")
-    print(f"Heuristics: length range=[{cheat_min_length}, {cheat_max_length}] length={cheat_length_guess(target_hash)}")
-
     if args.seed:
         if args.seed == "time":
             z3_seed = int(time.time())
@@ -170,8 +166,16 @@ def main():
             pass
         print(f"Found {len(database)} entries in the database.")
 
+    print(f"Looking for cheat codes hashing to {hash_target_str}. Maximum length: {args.length}")
+    cheat_min_length, cheat_max_length = cheat_length_range(target_hash)
+    print(f"Heuristics: length range=[{cheat_min_length}, {cheat_max_length}] length={cheat_length_guess(target_hash)}")
+
     cribs = re.split("[:,;]", args.cribs) if args.cribs else []
     if cribs:
+        length_range_cribs = cheat_length_range(target_hash, cribs)
+        if length_range_cribs != (cheat_min_length, cheat_max_length):
+            cheat_min_length, cheat_max_length = length_range_cribs
+            print(f"Heuristics: cribs narrowed the length range=[{cheat_min_length}, {cheat_max_length}]")
         crib_nbletters = sum(len(crib) for crib in cribs)
         if crib_nbletters >= args.length:
             parser.error("The crib is too long")

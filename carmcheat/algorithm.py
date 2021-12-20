@@ -5,10 +5,16 @@ import math
 import typing
 
 
-def cheat_length_range(hash: typing.Tuple[int, int]) -> typing.Tuple[int, int]:
-    sum_numbers = hash[0] >> 21
-    min_length = math.ceil(sum_numbers / char2number("z"))
-    max_length = math.floor(sum_numbers / char2number("a"))
+def cheat_length_range(hash: typing.Tuple[int, int], texts: typing.List[str]=None) -> typing.Tuple[int, int]:
+    if texts:
+        text_nbchars = sum(len(t) for t in texts)
+        text_sumchars = sum(char2number(c) for text in texts for c in text)
+    else:
+        text_nbchars = 0
+        text_sumchars = 0
+    sum_numbers = (hash[0] >> 21) - text_sumchars
+    min_length = text_nbchars + math.ceil(sum_numbers / char2number("z"))
+    max_length = text_nbchars + math.floor(sum_numbers / char2number("a"))
     return min_length, max_length
 
 
