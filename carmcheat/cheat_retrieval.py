@@ -149,13 +149,6 @@ def main():
     print(f"Looking for cheat codes hashing to {hash_target_str}. Maximum length: {args.length}")
     print(f"Heuristics: length range=[{cheat_min_length}, {cheat_max_length}] length={cheat_length_guess(target_hash)}")
 
-    cribs = re.split("[:,;]", args.cribs) if args.cribs else []
-    if cribs:
-        crib_nbletters = sum(len(crib) for crib in cribs)
-        if crib_nbletters >= args.length:
-            parser.error("The crib is too long")
-    crib_iterator = iterate_cribs(cribs, args.length, args.criborder == "keep")
-
     if args.seed:
         if args.seed == "time":
             z3_seed = int(time.time())
@@ -176,6 +169,15 @@ def main():
         except FileNotFoundError:
             pass
         print(f"Found {len(database)} entries in the database.")
+
+    cribs = re.split("[:,;]", args.cribs) if args.cribs else []
+    if cribs:
+        crib_nbletters = sum(len(crib) for crib in cribs)
+        if crib_nbletters >= args.length:
+            parser.error("The crib is too long")
+        matched_dbitems = [dbitem for dbitem in database if all(crib in dbitem for crib in cribs)]
+        print(f"{len(matched_dbitems)} database entries match the crib.")
+    crib_iterator = iterate_cribs(cribs, args.length, args.criborder == "keep")
 
     if not args.force:
         if not args.intermediates and not cheat_min_length <= args.length <= cheat_max_length:
