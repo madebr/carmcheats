@@ -13,7 +13,7 @@ def main():
 
     nb_total = 0
     nb_bad = 0
-    for line_i, line in enumerate(open(args.database, "r").readlines()):
+    for line_i, line in enumerate(open(args.database, "r").readlines(), 1):
         nb_total += 1
         db_hashcode_str, text = line.strip().rsplit(":", 1)
         real_hashcode = calc_hash(text)
