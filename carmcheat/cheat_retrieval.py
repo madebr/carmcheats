@@ -50,8 +50,10 @@ def iterate_cribs(cribs, length, keep_order):
     return iterate_cribs_recursively(mask_result, cribs, keep_order)
 
 
-def run(target_hash, length, crib_iterator, database, database_filename=None, check_intermediates=True, force=False):
+def run(target_hash, length, crib_iterator, database, vowel_frequency=None,
+        database_filename=None, check_intermediates=True, force=False):
     min_length, max_length = cheat_length_range(target_hash)
+    VOWELS = ["a", "e", "i", "o", "y"]
     for crib_mask in crib_iterator:
         print(f"Trying crib mask '{''.join(c if c else '_' for c in crib_mask)}'")
         s = z3.Solver()
@@ -64,6 +66,13 @@ def run(target_hash, length, crib_iterator, database, database_filename=None, ch
         for k in keycodes:
             s.add(k >= 22)
             s.add(k < 22 + 26)
+
+        if vowel_frequency is not None:
+            vowel_tests = []
+            for group_start_i in range(length - vowel_frequency + 1):
+                vowel_tests.append(z3.Or(*[keycodes[group_start_i + off] == char2number(vowel)
+                                           for vowel in VOWELS for off in range(vowel_frequency)]))
+            s.add(z3.And(vowel_tests))
 
         # Apply the "crib" to the input characters
         for k, c in zip(keycodes, crib_mask):
@@ -132,6 +141,7 @@ def main():
                         help="Find only cheat codes that contain all the 'cribs'. Use ',' as a separator.")
     parser.add_argument("--crib-order", dest="criborder", default="keep", choices=["keep", "dontcare"],
                         help="Allowed order of the 'cribs'.")
+    parser.add_argument("--vowels", action="store_true", help="Require frequent occurrence of a vowel")
     parser.add_argument("--database", metavar="DB", help="Append found cheat codes to this database")
     parser.add_argument("--intermediates", action="store_true", help="Match intermediates")
     parser.add_argument("--force", action="store_true", help="Force search")
@@ -190,8 +200,9 @@ def main():
 
     time_start = time.time()
     try:
-        result = run(target_hash, args.length, crib_iterator, database, database_filename=args.database,
-                     check_intermediates=args.intermediates, force=args.force)
+        result = run(target_hash, args.length, crib_iterator, database,
+                     vowel_frequency=4 if args.vowels else None,
+                     database_filename=args.database, check_intermediates=args.intermediates, force=args.force)
     except KeyboardInterrupt:
         result = 1
     time_finish = time.time()
