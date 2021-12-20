@@ -6,7 +6,7 @@ from carmcheat.analyze import run_analysis
 ALL_CHEATS = (
     ((0xa11ee75d, 0xf805eddd), None, "?", False),
     ((0x564e78b9, 0x99155115), "ibetyoucantprintcunt", "Edit mode", True),
-    ((0x1f47e5e8, 0xa715222c), "molemode", "?", True),
+    ((0x1f47e5e8, 0xa715222c), "molemode", "Flight mode", True),
     ((0x39d4c4c4, 0xf0a2c5b0), "mrcursorscool", "Final lap", True),
     ((0x2654216c, 0xf8256d15), "givemelard", "More money", True),
     ((0x4294ec89, 0xc38ad60e), "spamspamspamspam", "Pedestrians never move", True),
