@@ -185,8 +185,11 @@ def main():
             return
 
     time_start = time.time()
-    result = run(target_hash, args.length, crib_iterator, database, database_filename=args.database,
-                 check_intermediates=args.intermediates, force=args.force)
+    try:
+        result = run(target_hash, args.length, crib_iterator, database, database_filename=args.database,
+                     check_intermediates=args.intermediates, force=args.force)
+    except KeyboardInterrupt:
+        result = 1
     time_finish = time.time()
     time_delta = time_finish - time_start
 
