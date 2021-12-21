@@ -50,9 +50,10 @@ def iterate_cribs(cribs, length, keep_order):
     return iterate_cribs_recursively(mask_result, cribs, keep_order)
 
 
-def run(target_hash, length, crib_iterator, database, vowel_frequency=None,
+def run(target_hash, length, crib_info, database, vowel_frequency=None,
         database_filename=None, check_intermediates=True, force=False):
-    min_length, max_length = cheat_length_range(target_hash)
+    min_length, max_length = cheat_length_range(target_hash, texts=crib_info["cribs"])
+    crib_iterator = iterate_cribs(crib_info["cribs"], length, crib_info["order"] == "keep")
     VOWELS = ["a", "e", "i", "o", "y"]
     for crib_mask in crib_iterator:
         print(f"Trying crib mask '{''.join(c if c else '_' for c in crib_mask)}'")
@@ -191,7 +192,10 @@ def main():
             parser.error("The crib is too long")
         matched_dbitems = [dbitem for dbitem in database if all(crib in dbitem for crib in cribs)]
         print(f"{len(matched_dbitems)} database entries match the crib.")
-    crib_iterator = iterate_cribs(cribs, args.length, args.criborder == "keep")
+    crib_info = {
+        "cribs": cribs,
+        "order": args.criborder,
+    }
 
     if not args.force:
         if not args.intermediates and not cheat_min_length <= args.length <= cheat_max_length:
@@ -200,7 +204,7 @@ def main():
 
     time_start = time.time()
     try:
-        result = run(target_hash, args.length, crib_iterator, database,
+        result = run(target_hash, args.length, crib_info, database,
                      vowel_frequency=4 if args.vowels else None,
                      database_filename=args.database, check_intermediates=args.intermediates, force=args.force)
     except KeyboardInterrupt:
