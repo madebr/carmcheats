@@ -1,10 +1,10 @@
 # subject [conjugation]
 i
 you
-he s
-she s
-it s
+hes
+shes
+its
 we
 they
-who s
-whoever s
+whos
+whoevers
