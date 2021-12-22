@@ -1,13 +1,13 @@
-#include <iostream>
 #include <fstream>
+#include <ios>
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <sstream>
-#include <ios>
 
 enum class StringMode {
 	None = 0,
-	AppendS = 1
+	AppendS = 1,
 };
 
 struct StringWithMode {
@@ -21,8 +21,10 @@ StringWithMode* randomItem(std::vector<StringWithMode>* vec);
 int main() {
 	std::ios::sync_with_stdio(false);
 
-	std::ofstream outfile;
-	outfile.open("out.big.dic", std::ios_base::app);
+	std::ostream &os = std::cout;
+
+	//std::ofstream outfile;
+	//outfile.open("out.big.dic", std::ios_base::app);
 
 	std::vector<StringWithMode> sentenceStructures = readDataFile("sentence_structures.txt");
 	std::vector<StringWithMode> subjects = readDataFile("subjects.txt");
@@ -73,7 +75,7 @@ int main() {
 		outBuffer.append("\n");
 
 		if (outBuffer.length() > bufferSize - stringBufferSize) {
-			outfile << outBuffer;
+			os << outBuffer;
 
 			outBuffer.clear();
 		}
@@ -93,7 +95,7 @@ std::vector<StringWithMode> readDataFile(const char* fileName) {
 	if (input) {
 		for (std::string line; getline(input, line);)
 		{
-			if (line.length() == 0 || line.length() && line.at(0) == '#') {
+			if ((line.length() == 0) || (line.at(0) == '#')) {
 				continue;
 			}
 
