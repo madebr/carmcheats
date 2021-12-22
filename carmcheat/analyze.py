@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from carmcheat.algorithm import calc_hash, hash2str, cheat_length_guess, cheat_length_range
+from carmcheat.algorithm import calc_hash, hash2str, cheat_length_guess, cheat_length_range, hash2keycodeSum
 
 
 def run_analysis(all_cheats):
@@ -28,9 +28,10 @@ def run_analysis(all_cheats):
             else:
                 len_str = f"?"
                 factor_str = f"?"
+            keyCodeSum_str = f"{hash2keycodeSum(code)}"
             guess_factor = (guess_len - min_pw) / (max_pw - min_pw)
             guess_factor_str = f"{guess_factor*100:3.1f}%"
-            display_data = f"len={len_str:2s} guess_len={guess_len:<2} min_pw={min_pw:<2} max_pw={max_pw:<2} f={factor_str:5s} gf={guess_factor_str:5s}"
+            display_data = f"len={len_str:2s} guess_len={guess_len:<2} min_pw={min_pw:<2} max_pw={max_pw:<2} f={factor_str:5s} gf={guess_factor_str:5s} kcS={keyCodeSum_str}"
         elif args.display == "wordstats":
             VOWELS = ["a", "e", "i", "o", "u", "y"]
             if final:
