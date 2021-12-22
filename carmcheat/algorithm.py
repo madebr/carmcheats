@@ -2,6 +2,7 @@
 
 import argparse
 import math
+import sys
 import typing
 
 
@@ -69,14 +70,28 @@ def hash2keycodeSum(hash: typing.Tuple[int, int]) -> int:
     return hash[0] >> 21
 
 
+
+def iterate_file(f: typing.IO) -> typing.Iterable[str]:
+    while True:
+        line = f.readline()
+        if not line:
+            return
+        yield line.strip()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Hash some cheat codes")
     parser.add_argument("--steps", action="store_true", help="Show the steps")
     parser.add_argument("--stats", action="store_true", help="Show extra stats")
-    parser.add_argument("cheatcodes", metavar="CHEATCODE", nargs="+", help="Cheat code to hash")
+    parser.add_argument("cheatcodes", metavar="CHEATCODE", nargs="*", help="Cheat code to hash")
     args = parser.parse_args()
 
-    for cheatcode in args.cheatcodes:
+    if args.cheatcodes:
+        cheatcodes = args.cheatcodes
+    else:
+        cheatcodes = iterate_file(sys.stdin)
+
+    for cheatcode in cheatcodes:
         if args.steps:
             state = hash_init()
             print(f" code1={state[0]:032b}  code2={state[1]:032b} sum={state[2]:032b}")
