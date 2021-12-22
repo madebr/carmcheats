@@ -81,7 +81,7 @@ def read_wordlist(path: pathlib.Path) -> WordList:
     return WordList(read_datafile(path))
 
 
-def iterate_wordlists_recursive(wordLists: typing.List[WordList], keyCodeSumRemaining: int, parts: typing.List[typing.Optional[str]], index: int) -> typing.Iterable[typing.Tuple[typing.List[str], int]]:
+def print_matching_words_recurse(wordLists: typing.List[WordList], keyCodeSumRemaining: int, parts: typing.List[typing.Optional[str]], index: int):
     if index >= len(wordLists):
         return iter(())
     if keyCodeSumRemaining < 20:
@@ -93,13 +93,13 @@ def iterate_wordlists_recursive(wordLists: typing.List[WordList], keyCodeSumRema
         wordKeyCodeSum = wordlist.keyCodeSums[w_i]
         parts[index] = word
         if keyCodeSumRemaining == wordKeyCodeSum:
-            yield parts, index + 1
+            print("".join(parts[:index+1]))
         elif keyCodeSumRemaining > wordKeyCodeSum:
-            yield from iterate_wordlists_recursive(wordLists, keyCodeSumRemaining - wordKeyCodeSum, parts, index + 1)
+            print_matching_words_recurse(wordLists, keyCodeSumRemaining - wordKeyCodeSum, parts, index + 1)
 
 
-def iterate_wordlists(wordlists: typing.List[WordList], keyCodeSum: int) -> typing.Iterable[typing.Tuple[typing.List[str], int]]:
-    yield from iterate_wordlists_recursive(wordlists, keyCodeSum, [None] * len(wordlists), 0)
+def print_matching_words(wordlists: typing.List[WordList], keyCodeSum: int):
+    print_matching_words_recurse(wordlists, keyCodeSum, [None] * len(wordlists), 0)
 
 
 def main():
@@ -139,8 +139,7 @@ def main():
             if args.hash:
                 hash = str2hash(args.hash)
                 keyCodeSum = hash2keycodeSum(hash)
-                for combo, cnt in iterate_wordlists(selection_data, keyCodeSum):
-                    print("".join(combo[:cnt]))
+                print_matching_words(selection_data, keyCodeSum)
             else:
                 for combo in itertools.product(*[wl.words for wl in selection_data]):
                     print("".join(combo))
