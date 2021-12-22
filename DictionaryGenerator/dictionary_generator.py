@@ -55,6 +55,22 @@ def find_index_le(a, x):
     raise ValueError
 
 
+def find_index_eq(a, x):
+    'Locate the leftmost value exactly equal to x'
+    i = bisect.bisect_left(a, x)
+    if i != len(a) and a[i] == x:
+        return i
+    raise ValueError
+
+
+def find_index_gt(a, x):
+    'Find leftmost value greater than x'
+    i = bisect.bisect_right(a, x)
+    if i != len(a):
+        return i
+    raise ValueError
+
+
 def calculate_keycode_sum(word: str) -> int:
     return sum(char2number(c) for c in word)
 
@@ -83,14 +99,24 @@ def read_wordlist(path: pathlib.Path) -> WordList:
 
 def print_matching_words_recurse(wordLists: typing.List[WordList], keyCodeSumRemaining: int, parts: typing.List[typing.Optional[str]], index: int):
     if index >= len(wordLists):
-        return iter(())
+        return
     if keyCodeSumRemaining < 20:
-        return iter(())
-    wordlist = wordLists[index]
-    minIndex, maxIndex = wordlist.lookupRange(keyCodeSumRemaining)
+        return
+    wordList = wordLists[index]
+    if index == len(wordLists) - 1:
+        try:
+            minIndex = find_index_eq(wordList.keyCodeSums, keyCodeSumRemaining)
+        except ValueError:
+            return
+        try:
+            maxIndex = find_index_gt(wordList.keyCodeSums, keyCodeSumRemaining)
+        except ValueError:
+            maxIndex = len(wordList.keyCodeSums)
+    else:
+        minIndex, maxIndex = wordList.lookupRange(keyCodeSumRemaining)
     for w_i in range(minIndex, maxIndex):
-        word = wordlist.words[w_i]
-        wordKeyCodeSum = wordlist.keyCodeSums[w_i]
+        word = wordList.words[w_i]
+        wordKeyCodeSum = wordList.keyCodeSums[w_i]
         parts[index] = word
         if keyCodeSumRemaining == wordKeyCodeSum:
             print("".join(parts[:index+1]))
