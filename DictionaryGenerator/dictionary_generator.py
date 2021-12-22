@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import bisect
 import itertools
 import math
 import pathlib
@@ -13,42 +14,42 @@ from carmcheat.algorithm import char2number, str2hash, hash2keycodeSum
 DATA_DIR = pathlib.Path(__file__).resolve().parent / "data"
 
 
-# FIXME: use `bisect.bisect_right` if python version >= 3.10
-def bisect_right(a, x, lo=0, hi=None, *, key=None):
-    """Return the index where to insert item x in list a, assuming a is sorted.
-    The return value i is such that all e in a[:i] have e <= x, and all e in
-    a[i:] have e > x.  So if x already appears in the list, a.insert(i, x) will
-    insert just after the rightmost x already there.
-    Optional args lo (default 0) and hi (default len(a)) bound the
-    slice of a to be searched.
-    """
+# # FIXME: use `bisect.bisect_right` if python version >= 3.10
+# def bisect_right(a, x, lo=0, hi=None, *, key=None):
+#     """Return the index where to insert item x in list a, assuming a is sorted.
+#     The return value i is such that all e in a[:i] have e <= x, and all e in
+#     a[i:] have e > x.  So if x already appears in the list, a.insert(i, x) will
+#     insert just after the rightmost x already there.
+#     Optional args lo (default 0) and hi (default len(a)) bound the
+#     slice of a to be searched.
+#     """
+#
+#     if lo < 0:
+#         raise ValueError('lo must be non-negative')
+#     if hi is None:
+#         hi = len(a)
+#     # Note, the comparison uses "<" to match the
+#     # __lt__() logic in list.sort() and in heapq.
+#     if key is None:
+#         while lo < hi:
+#             mid = (lo + hi) // 2
+#             if x < a[mid]:
+#                 hi = mid
+#             else:
+#                 lo = mid + 1
+#     else:
+#         while lo < hi:
+#             mid = (lo + hi) // 2
+#             if x < key(a[mid]):
+#                 hi = mid
+#             else:
+#                 lo = mid + 1
+#     return lo
 
-    if lo < 0:
-        raise ValueError('lo must be non-negative')
-    if hi is None:
-        hi = len(a)
-    # Note, the comparison uses "<" to match the
-    # __lt__() logic in list.sort() and in heapq.
-    if key is None:
-        while lo < hi:
-            mid = (lo + hi) // 2
-            if x < a[mid]:
-                hi = mid
-            else:
-                lo = mid + 1
-    else:
-        while lo < hi:
-            mid = (lo + hi) // 2
-            if x < key(a[mid]):
-                hi = mid
-            else:
-                lo = mid + 1
-    return lo
 
-
-def find_index_le(a, x, *, key=None):
+def find_index_le(a, x):
     'Find rightmost value less than or equal to x'
-    i = bisect_right(a, x, key=key if key else None)
+    i = bisect.bisect_right(a, x)
     if i:
         return i-1
     raise ValueError
@@ -62,10 +63,11 @@ class WordList:
     def __init__(self, words: typing.List[str]):
         self.words = words
         self.words.sort(key=calculate_keycode_sum)
+        self.keyCodeSums = [calculate_keycode_sum(word) for word in self.words]
 
     def lookupRange(self, value: int) -> typing.Tuple[int, int]:
         try:
-            upper_index = find_index_le(self.words, value, key=calculate_keycode_sum)
+            upper_index = find_index_le(self.keyCodeSums, value)
             return (0, upper_index + 1)
         except:
             return (0, 0)
@@ -79,26 +81,25 @@ def read_wordlist(path: pathlib.Path) -> WordList:
     return WordList(read_datafile(path))
 
 
-def iterate_wordlists_recursive(wordlists: typing.List[WordList], keyCodeSumRemaining: int) -> typing.Iterable[typing.List[str]]:
-    if not wordlists:
+def iterate_wordlists_recursive(wordLists: typing.List[WordList], keyCodeSumRemaining: int, parts: typing.List[typing.Optional[str]], index: int) -> typing.Iterable[typing.Tuple[typing.List[str], int]]:
+    if index >= len(wordLists):
         return iter(())
     if keyCodeSumRemaining < 20:
         return iter(())
-    wordlist = wordlists[0]
-    remaining_wordlists = wordlists[1:]
+    wordlist = wordLists[index]
     minIndex, maxIndex = wordlist.lookupRange(keyCodeSumRemaining)
     for w_i in range(minIndex, maxIndex):
         word = wordlist.words[w_i]
-        wordKeyCodeSum = calculate_keycode_sum(word)
-        if keyCodeSumRemaining > wordKeyCodeSum:
-            for r in iterate_wordlists_recursive(remaining_wordlists, keyCodeSumRemaining- wordKeyCodeSum):
-                yield [word] + r
+        wordKeyCodeSum = wordlist.keyCodeSums[w_i]
+        parts[index] = word
         if keyCodeSumRemaining == wordKeyCodeSum:
-            yield [word]
+            yield parts, index + 1
+        elif keyCodeSumRemaining > wordKeyCodeSum:
+            yield from iterate_wordlists_recursive(wordLists, keyCodeSumRemaining - wordKeyCodeSum, parts, index + 1)
 
 
-def iterate_wordlists(wordlists: typing.List[WordList], keyCodeSum: int) -> typing.Iterable[typing.List[str]]:
-    return iterate_wordlists_recursive(wordlists, keyCodeSum)
+def iterate_wordlists(wordlists: typing.List[WordList], keyCodeSum: int) -> typing.Iterable[typing.Tuple[typing.List[str], int]]:
+    yield from iterate_wordlists_recursive(wordlists, keyCodeSum, [None] * len(wordlists), 0)
 
 
 def main():
@@ -138,8 +139,8 @@ def main():
             if args.hash:
                 hash = str2hash(args.hash)
                 keyCodeSum = hash2keycodeSum(hash)
-                for combo in iterate_wordlists(selection_data, keyCodeSum):
-                    print("".join(combo))
+                for combo, cnt in iterate_wordlists(selection_data, keyCodeSum):
+                    print("".join(combo[:cnt]))
             else:
                 for combo in itertools.product(*[wl.words for wl in selection_data]):
                     print("".join(combo))
