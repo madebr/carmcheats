@@ -65,9 +65,14 @@ def str2hash(text: str) -> typing.Tuple[int, int]:
     return result
 
 
+def hash2keycodeSum(hash: typing.Tuple[int, int]) -> int:
+    return hash[0] >> 21
+
+
 def main():
     parser = argparse.ArgumentParser(description="Hash some cheat codes")
     parser.add_argument("--steps", action="store_true", help="Show the steps")
+    parser.add_argument("--stats", action="store_true", help="Show extra stats")
     parser.add_argument("cheatcodes", metavar="CHEATCODE", nargs="+", help="Cheat code to hash")
     args = parser.parse_args()
 
@@ -80,6 +85,8 @@ def main():
                 print(f" code1={state[0]:032b}  code2={state[1]:032b} sum={state[2]:032b} char={char2number(c):08b} ({c})")
             final = hash_final(*state)
             print(f"final1={final[0]:032b} final2={final[1]:032b}")
+        elif args.stats:
+            print(f"{hash2str(calc_hash(cheatcode))}:{cheatcode} keyCodeSum={sum(char2number(c) for c in cheatcode)}")
         else:
             print(f"{hash2str(calc_hash(cheatcode))}:{cheatcode}")
 
