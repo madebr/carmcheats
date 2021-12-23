@@ -96,7 +96,8 @@ class StateWatcher:
         self.timer.start()
 
     def stop(self):
-        self.timer.cancel()
+        if self.timer:
+            self.timer.cancel()
 
 
 def print_matching_words_recurse(state: DictionaryGeneratorState, keyCodeSumRemaining: int, index: int):
@@ -134,6 +135,7 @@ def print_matching_words(state: DictionaryGeneratorState, keyCodeSum: int):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--stats", action="store_true", help="Print statistics")
+    parser.add_argument("--no-status", action="store_false", dest="status", help="Don't print status reports to stderr")
     parser.add_argument("hash", nargs="?", help="Target hash")
     args = parser.parse_args()
 
@@ -156,7 +158,8 @@ def main():
     running_nb = 0
 
     watcher = StateWatcher()
-    watcher.start()
+    if args.status:
+        watcher.start()
     try:
 
         for sentence_structure in sentence_structures:
