@@ -126,6 +126,7 @@ def print_matching_words_recurse(state: DictionaryGeneratorState, keyCodeSumRema
             print("".join(parts[:index+1]))
         elif keyCodeSumRemaining > wordKeyCodeSum:
             print_matching_words_recurse(state, keyCodeSumRemaining - wordKeyCodeSum, index + 1)
+    parts[index] = None
 
 
 def print_matching_words(state: DictionaryGeneratorState, keyCodeSum: int):
