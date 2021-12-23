@@ -5,6 +5,8 @@ import bisect
 import itertools
 import math
 import pathlib
+import sys
+import threading
 import time
 import typing
 
@@ -12,39 +14,6 @@ from carmcheat.algorithm import char2number, str2hash, hash2keycodeSum
 
 
 DATA_DIR = pathlib.Path(__file__).resolve().parent / "data"
-
-
-# # FIXME: use `bisect.bisect_right` if python version >= 3.10
-# def bisect_right(a, x, lo=0, hi=None, *, key=None):
-#     """Return the index where to insert item x in list a, assuming a is sorted.
-#     The return value i is such that all e in a[:i] have e <= x, and all e in
-#     a[i:] have e > x.  So if x already appears in the list, a.insert(i, x) will
-#     insert just after the rightmost x already there.
-#     Optional args lo (default 0) and hi (default len(a)) bound the
-#     slice of a to be searched.
-#     """
-#
-#     if lo < 0:
-#         raise ValueError('lo must be non-negative')
-#     if hi is None:
-#         hi = len(a)
-#     # Note, the comparison uses "<" to match the
-#     # __lt__() logic in list.sort() and in heapq.
-#     if key is None:
-#         while lo < hi:
-#             mid = (lo + hi) // 2
-#             if x < a[mid]:
-#                 hi = mid
-#             else:
-#                 lo = mid + 1
-#     else:
-#         while lo < hi:
-#             mid = (lo + hi) // 2
-#             if x < key(a[mid]):
-#                 hi = mid
-#             else:
-#                 lo = mid + 1
-#     return lo
 
 
 def find_index_le(a, x):
@@ -97,13 +66,46 @@ def read_wordlist(path: pathlib.Path) -> WordList:
     return WordList(read_datafile(path))
 
 
-def print_matching_words_recurse(wordLists: typing.List[WordList], keyCodeSumRemaining: int, parts: typing.List[typing.Optional[str]], index: int):
-    if index >= len(wordLists):
+class DictionaryGeneratorState:
+    def __init__(self, wordLists: typing.List[WordList]):
+        self.wordLists = wordLists
+        self.parts: typing.List[typing.Optional[str]] = [None] * len(wordLists)
+
+
+class StateWatcher:
+    def __init__(self, interval: int=2):
+        self.state: typing.Optional[DictionaryGeneratorState] = None
+        self.structure: typing.Optional[str] = None
+        self.timer = None
+        self.interval = interval
+
+    def set_state(self, state:DictionaryGeneratorState):
+        self.state = state
+
+    def set_structure(self, structure: str):
+        self.structure = structure
+
+    def start(self):
+        self.timer = threading.Timer(interval=self.interval, function=self._run_retrigger)
+        self.timer.start()
+
+    def _run_retrigger(self):
+        if self.state:
+            print(f"structure={self.structure} parts:{self.state.parts}", file=sys.stderr)
+        self.timer = threading.Timer(interval=self.interval, function=self._run_retrigger)
+        self.timer.start()
+
+    def stop(self):
+        self.timer.cancel()
+
+
+def print_matching_words_recurse(state: DictionaryGeneratorState, keyCodeSumRemaining: int, index: int):
+    if index >= len(state.wordLists):
         return
     if keyCodeSumRemaining < 20:
         return
-    wordList = wordLists[index]
-    if index == len(wordLists) - 1:
+    wordList = state.wordLists[index]
+    if index == len(state.wordLists) - 1:
         try:
             minIndex = find_index_eq(wordList.keyCodeSums, keyCodeSumRemaining)
         except ValueError:
@@ -114,6 +116,7 @@ def print_matching_words_recurse(wordLists: typing.List[WordList], keyCodeSumRem
             maxIndex = len(wordList.keyCodeSums)
     else:
         minIndex, maxIndex = wordList.lookupRange(keyCodeSumRemaining)
+    parts = state.parts
     for w_i in range(minIndex, maxIndex):
         word = wordList.words[w_i]
         wordKeyCodeSum = wordList.keyCodeSums[w_i]
@@ -121,11 +124,11 @@ def print_matching_words_recurse(wordLists: typing.List[WordList], keyCodeSumRem
         if keyCodeSumRemaining == wordKeyCodeSum:
             print("".join(parts[:index+1]))
         elif keyCodeSumRemaining > wordKeyCodeSum:
-            print_matching_words_recurse(wordLists, keyCodeSumRemaining - wordKeyCodeSum, parts, index + 1)
+            print_matching_words_recurse(state, keyCodeSumRemaining - wordKeyCodeSum, index + 1)
 
 
-def print_matching_words(wordlists: typing.List[WordList], keyCodeSum: int):
-    print_matching_words_recurse(wordlists, keyCodeSum, [None] * len(wordlists), 0)
+def print_matching_words(state: DictionaryGeneratorState, keyCodeSum: int):
+    print_matching_words_recurse(state, keyCodeSum, 0)
 
 
 def main():
@@ -152,31 +155,39 @@ def main():
 
     running_nb = 0
 
-    for sentence_structure in sentence_structures:
-        time_start_sentence_structure = time.time()
-        selection_data = [markers[c] for c in sentence_structure]
-        nb = math.prod([len(wl.words) for wl in selection_data])
+    watcher = StateWatcher()
+    watcher.start()
+    try:
 
-        running_nb += nb
+        for sentence_structure in sentence_structures:
+            watcher.set_structure(sentence_structure)
+            time_start_sentence_structure = time.time()
+            selection_data = [markers[c] for c in sentence_structure]
+            nb = math.prod([len(wl.words) for wl in selection_data])
+
+            running_nb += nb
+
+            if args.stats:
+                print(f"sentence structure: {sentence_structure} -> {nb} items")
+            else:
+                if args.hash:
+                    hash = str2hash(args.hash)
+                    keyCodeSum = hash2keycodeSum(hash)
+                    state = DictionaryGeneratorState(selection_data)
+                    watcher.set_state(state)
+                    print_matching_words(state, keyCodeSum)
+                else:
+                    for combo in itertools.product(*[wl.words for wl in selection_data]):
+                        print("".join(combo))
+
+            time_end_sentence_structure = time.time()
+            with open("progress.txt", "a") as fn:
+                print(f"{sentence_structure},{time_end_sentence_structure-time_start_sentence_structure:2.1f}", file=fn)
 
         if args.stats:
-            print(f"sentence structure: {sentence_structure} -> {nb} items")
-        else:
-            if args.hash:
-                hash = str2hash(args.hash)
-                keyCodeSum = hash2keycodeSum(hash)
-                print_matching_words(selection_data, keyCodeSum)
-            else:
-                for combo in itertools.product(*[wl.words for wl in selection_data]):
-                    print("".join(combo))
-
-        time_end_sentence_structure = time.time()
-        with open("progress.txt", "a") as fn:
-            print(f"{sentence_structure},{time_end_sentence_structure-time_start_sentence_structure:2.1f}", file=fn)
-
-
-    if args.stats:
-        print(f"Total: {running_nb}")
+            print(f"Total: {running_nb}")
+    finally:
+        watcher.stop()
 
 
 if __name__ == "__main__":
