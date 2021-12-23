@@ -70,6 +70,7 @@ class DictionaryGeneratorState:
     def __init__(self, wordLists: typing.List[WordList]):
         self.wordLists = wordLists
         self.parts: typing.List[typing.Optional[str]] = [None] * len(wordLists)
+        self.repeat: int = 1
 
 
 class StateWatcher:
@@ -118,12 +119,13 @@ def print_matching_words_recurse(state: DictionaryGeneratorState, keyCodeSumRema
     else:
         minIndex, maxIndex = wordList.lookupRange(keyCodeSumRemaining)
     parts = state.parts
+    nb_repeat = state.repeat
     for w_i in range(minIndex, maxIndex):
         word = wordList.words[w_i]
         wordKeyCodeSum = wordList.keyCodeSums[w_i]
         parts[index] = word
         if keyCodeSumRemaining == wordKeyCodeSum:
-            print("".join(parts[:index+1]))
+            print("".join(parts[:index+1]) * nb_repeat)
         elif keyCodeSumRemaining > wordKeyCodeSum:
             print_matching_words_recurse(state, keyCodeSumRemaining - wordKeyCodeSum, index + 1)
     parts[index] = None
@@ -137,6 +139,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--stats", action="store_true", help="Print statistics")
     parser.add_argument("--no-status", action="store_false", dest="status", help="Don't print status reports to stderr")
+    parser.add_argument("--repeat", default=1, type=int, help="Repeat cheat nb times (must be >= 1)")
     parser.add_argument("hash", nargs="?", help="Target hash")
     args = parser.parse_args()
 
@@ -158,6 +161,14 @@ def main():
 
     running_nb = 0
 
+    if args.repeat <= 0:
+        parser.error("repeat must be >= 1")
+    if args.hash:
+        hash = str2hash(args.hash)
+        keyCodeSum = hash2keycodeSum(hash)
+        if keyCodeSum % keyCodeSum != 0:
+            parser.error(f"When passing a hash, repeat must be a divisor of the keycode sum (={keyCodeSum})")
+
     watcher = StateWatcher()
     if args.status:
         watcher.start()
@@ -176,13 +187,15 @@ def main():
             else:
                 if args.hash:
                     hash = str2hash(args.hash)
-                    keyCodeSum = hash2keycodeSum(hash)
+                    keyCodeSum = hash2keycodeSum(hash) // args.repeat
                     state = DictionaryGeneratorState(selection_data)
+                    state.repeat = args.repeat
                     watcher.set_state(state)
                     print_matching_words(state, keyCodeSum)
                 else:
+                    nb_repeat = args.repeat
                     for combo in itertools.product(*[wl.words for wl in selection_data]):
-                        print("".join(combo))
+                        print("".join(combo) * nb_repeat)
 
             time_end_sentence_structure = time.time()
             with open("progress.txt", "a") as fn:
