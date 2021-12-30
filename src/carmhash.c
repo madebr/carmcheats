@@ -39,6 +39,8 @@ hash_digest(const c2_state_t *state, c2_hash_t *hash) {
 }
 
 int main(int argc, char *argv[]) {
+    c2_state_t state;
+    c2_hash_t hash;
     if (argc == 1) {
 #ifdef _WIN32
         fprintf(stderr, "Need at least one argument\n");
@@ -46,17 +48,21 @@ int main(int argc, char *argv[]) {
 #else
         char *line = NULL;
         size_t lineSize = 0;
-        while (!feof(stdin)) {
+        while (1) {
+            hash_reset(&state);
             ssize_t nb = getline(&line, &lineSize, stdin);
+            if (feof(stdin)) {
+                break;
+            }
             line[nb - 1] = '\0';
-            printf("got '%s'\n", line);
+            hash_update(&state, line);
+            hash_digest(&state, &hash);
+            printf("%08x:%08x:%s\n", hash.code1, hash.code2, line);
         }
         free(line);
         return 0;
 #endif
     }
-    c2_state_t state;
-    c2_hash_t hash;
     for (int i = 1; i < argc; i += 1) {
         hash_reset(&state);
         hash_update(&state, argv[i]);
