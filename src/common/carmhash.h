@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 typedef struct {
@@ -21,3 +25,7 @@ hash_update(c2_state_t *state, const char *txt);
 
 void
 hash_digest(const c2_state_t *state, c2_hash_t *hash);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif

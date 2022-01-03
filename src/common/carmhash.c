@@ -11,7 +11,7 @@ hash_reset(c2_state_t *state) {
 void
 hash_update(c2_state_t *state, const char *txt) {
     while (*txt != '\0') {
-        uint8_t letterCode = tolower(*txt) - 'a' + 22;
+        uint8_t letterCode = (uint8_t)tolower(*txt) - 'a' + 22;
         state->sum += letterCode;
         state->code1 += letterCode << 11;
         state->code1 = (state->code1 >> 17) + (state->code1 << 4);
