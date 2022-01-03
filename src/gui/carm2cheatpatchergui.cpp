@@ -30,11 +30,11 @@ calculateHash(const QString &cheat) {
 
 bool
 CarmHashCode_t::updateCheat(const QString &newCheat) {
-    bool cheatChanged = cheat != newCheat;
-    cheat = newCheat;
+    bool cheatChanged = actualCheat != newCheat;
+    actualCheat = newCheat;
     c2_hash_t newHash = calculateHash(newCheat);
     modified = (newHash.code1 != fileHash.code1) || (newHash.code2 != fileHash.code2);
-    differsFromDefault = (newHash.code1 != defaultHash.code1) || (newHash.code2 != defaultHash.code2);
+    modded = (newHash.code1 != defaultHash.code1) || (newHash.code2 != defaultHash.code2);
     cheatChanged = cheatChanged || (newHash.code1 != actualHash.code1) || (newHash.code2 != actualHash.code2);
     actualHash = newHash;
     return cheatChanged;
@@ -43,11 +43,11 @@ CarmHashCode_t::updateCheat(const QString &newCheat) {
 void
 CarmHashCode_t::undoChanges() {
     actualHash = fileHash;
-    cheat = "";
+    actualCheat = "";
     modified = false;
-    differsFromDefault = !((actualHash.code1 == defaultHash.code1) && (actualHash.code2 == defaultHash.code2));
-    if (!differsFromDefault) {
-        cheat = defaultCheat;
+    modded = !((actualHash.code1 == defaultHash.code1) && (actualHash.code2 == defaultHash.code2));
+    if (!modded) {
+        actualCheat = defaultCheat;
     }
 }
 
@@ -60,37 +60,42 @@ static void
 collect_data_callback(CarmCheatVerifyResult* result, void *userData) {
     bool hashDiffers = (result->type & CARM_CHEAT_VERIFY_RESULT_HASH_DIFFERS) != 0;
     CarmActualHashCodes_t *actualHashes = static_cast<CarmActualHashCodes_t *>(userData);
+    const char *defaultCheat;
+    c2_hash_t defaultHash;
+    const char *actualCheat = nullptr;
+    int actualIndex;
     switch(result->cheatType) {
-    case CARM_CHEAT_VERIFY_TABLE_ITEM: {
-        const char *defaultCheat = result->cheatData->table->items[result->index].cheat;
-        c2_hash_t defaultHash = calculateHash(defaultCheat);
-        actualHashes->tableItems[result->index] = {result->hash, result->hash, defaultHash, defaultCheat, hashDiffers};
-        if (!hashDiffers) {
-            actualHashes->tableItems[result->index].cheat = defaultCheat;
-        }
-        break;
-    }
     case CARM_CHEAT_VERIFY_FRAGMENT: {
-        const char *defaultCheat = result->cheatData->fragments[result->index].cheat;
-        c2_hash_t defaultHash = calculateHash(defaultCheat);
-        actualHashes->fragmentItems[result->index] = {result->hash, result->hash, defaultHash, defaultCheat, hashDiffers};
+        actualIndex = result->index;
+        defaultCheat = result->cheatData->fragments[result->index].cheat;
+        defaultHash = calculateHash(defaultCheat);
         if (!hashDiffers) {
-            actualHashes->tableItems[result->index].cheat = defaultCheat;
+            actualCheat = defaultCheat;
+        }
+        break;
+    case CARM_CHEAT_VERIFY_TABLE_ITEM: {
+        actualIndex = result->cheatData->nbFragments + result->index;
+        defaultCheat = result->cheatData->table->items[result->index].cheat;
+        defaultHash = calculateHash(defaultCheat);
+        if (!hashDiffers) {
+            actualCheat = defaultCheat;
         }
         break;
     }
+    }
+    default:
+        return;
+    }
+    actualHashes->items[actualIndex] = {result->cheatType, result->hash, result->hash, defaultHash, defaultCheat, hashDiffers};
+    actualHashes->items[actualIndex].cheatDataIndex = result->index;
+    if (actualCheat != nullptr) {
+        actualHashes->items[actualIndex].actualCheat = actualCheat;
     }
 }
 
 std::tuple<CarmCheatVerifyType, size_t>
 CheatPatcherModel::modelIndex2Idx(const QModelIndex &index) const {
-    CarmCheatVerifyType idxType = CARM_CHEAT_VERIFY_FRAGMENT;
-    size_t idx = index.row();
-    if (idx >= m_cheatData->nbFragments) {
-        idx -= m_cheatData->nbFragments;
-        idxType = CARM_CHEAT_VERIFY_TABLE_ITEM;
-    }
-    return {idxType, idx};
+    return {m_actualHashes.items[index.row()].type, index.row()};
 }
 
 void
@@ -103,10 +108,7 @@ CheatPatcherModel::setActualHashes(CarmActualHashCodes_t &&actualHashes, const C
 
 int
 CheatPatcherModel::rowCount(const QModelIndex &) const {
-    if (m_cheatData == nullptr) {
-        return 0;
-    }
-    return m_cheatData->nbFragments + m_cheatData->table->nbItems;
+    return (m_actualHashes.items.size());
 }
 
 int
@@ -141,13 +143,8 @@ CheatPatcherModel::headerData(int section, Qt::Orientation orientation, int role
             }
             break;
         case Qt::Vertical: {
-            CarmCheatVerifyType idxType = CARM_CHEAT_VERIFY_FRAGMENT;
-            size_t idx = section;
-            if (idx >= m_cheatData->nbFragments) {
-                idxType = CARM_CHEAT_VERIFY_TABLE_ITEM;
-                idx -= m_cheatData->nbFragments;
-            }
-            return idxTypeIndexToString(idxType, idx);
+            const CarmHashCode_t &item = itemAtIndex(section);
+            return idxTypeIndexToString(item.type, item.cheatDataIndex);
         }
         }
         break;
@@ -162,99 +159,57 @@ CheatPatcherModel::data(const QModelIndex &index, int role) const {
     if (!index.isValid()) {
         return {};
     }
-    auto [idxType, idx] = modelIndex2Idx(index);
+    const CarmHashCode_t &item = itemAtIndex(index);
     switch (role) {
     case Qt::FontRole: {
         QFont font;
         switch (index.column()) {
         case COLUMN_HASH:
             font.setFamily("Courier");
-            font.setFixedPitch(true);
         }
-        switch (idxType) {
-        case CARM_CHEAT_VERIFY_TABLE_ITEM:
-            if (m_actualHashes.tableItems[idx].differsFromDefault) {
-                font.setItalic(true);
-            }
-            if (m_actualHashes.tableItems[idx].modified) {
-                font.setWeight(QFont::Bold);
-            }
-            break;
-        case CARM_CHEAT_VERIFY_FRAGMENT:
-            if (m_actualHashes.fragmentItems[idx].differsFromDefault) {
-                font.setItalic(true);
-            }
-            if (m_actualHashes.fragmentItems[idx].modified) {
-                font.setWeight(QFont::Bold);
-            }
-            break;
+        if (m_actualHashes.items[index.row()].modded) {
+            font.setItalic(true);
+        }
+        if (m_actualHashes.items[index.row()].modified) {
+            font.setWeight(QFont::Bold);
         }
         return font;
     }
     case Qt::DisplayRole:
         switch (index.column()) {
         case COLUMN_DESCRIPTION:
-            switch (idxType) {
+            switch (item.type) {
             case CARM_CHEAT_VERIFY_TABLE_ITEM:
-                return m_cheatData->table->items[idx].description;
+                return m_cheatData->table->items[item.cheatDataIndex].description;
             case CARM_CHEAT_VERIFY_FRAGMENT:
-                return m_cheatData->fragments[idx].description;
+                return m_cheatData->fragments[item.cheatDataIndex].description;
             }
             break;
         case COLUMN_CHEAT:
-            switch (idxType) {
-            case CARM_CHEAT_VERIFY_TABLE_ITEM:
-                if (m_actualHashes.tableItems[idx].cheat.length() > 0) {
-                    return m_actualHashes.tableItems[idx].cheat;
-                } else if (m_actualHashes.tableItems[idx].differsFromDefault) {
-                    return tr("(unknown)");
-                } else {
-                    return m_cheatData->table->items[idx].cheat;
-                }
-            case CARM_CHEAT_VERIFY_FRAGMENT:
-                if (m_actualHashes.fragmentItems[idx].cheat.length() > 0) {
-                    return m_actualHashes.fragmentItems[idx].cheat;
-                } else if (m_actualHashes.fragmentItems[idx].differsFromDefault) {
-                    return tr("(unknown)");
-                } else {
-                    return m_cheatData->fragments[idx].cheat;
-                }
+            if (m_actualHashes.items[index.row()].actualCheat.length() > 0) {
+                return m_actualHashes.items[index.row()].actualCheat;
+            } else if (m_actualHashes.items[index.row()].modded) {
+                return tr("(unknown)");
+            } else {
+                return m_cheatData->table->items[index.row()].cheat;
             }
             break;
         case COLUMN_HASH:
-            switch (idxType) {
-            case CARM_CHEAT_VERIFY_TABLE_ITEM:
-                return QString{"%1:%2"}
-                    .arg(m_actualHashes.tableItems[idx].actualHash.code1, 8, 16, QChar{'0'})
-                    .arg(m_actualHashes.tableItems[idx].actualHash.code2, 8, 16, QChar{'0'});
-            case CARM_CHEAT_VERIFY_FRAGMENT:
-                return QString{"%1:%2"}
-                    .arg(m_actualHashes.fragmentItems[idx].actualHash.code1, 8, 16, QChar{'0'})
-                    .arg(m_actualHashes.fragmentItems[idx].actualHash.code2, 8, 16, QChar{'0'});
-            }
+            return QString{"%1:%2"}
+                .arg(m_actualHashes.items[index.row()].actualHash.code1, 8, 16, QChar{'0'})
+                .arg(m_actualHashes.items[index.row()].actualHash.code2, 8, 16, QChar{'0'});
             break;
         }
         break;
     case Qt::EditRole:
         switch (index.column()) {
         case COLUMN_CHEAT:
-            switch (idxType) {
-            case CARM_CHEAT_VERIFY_TABLE_ITEM:
-                if (m_actualHashes.tableItems[idx].cheat.length() > 0) {
-                    return m_actualHashes.tableItems[idx].cheat;
-                } else if (m_actualHashes.tableItems[idx].differsFromDefault) {
-                    return {};
-                } else {
-                    return m_cheatData->table->items[idx].cheat;
-                }
-            case CARM_CHEAT_VERIFY_FRAGMENT:
-                if (m_actualHashes.fragmentItems[idx].cheat.length() > 0) {
-                    return m_actualHashes.fragmentItems[idx].cheat;
-                } if (m_actualHashes.fragmentItems[idx].differsFromDefault) {
-                    return {};
-                } else {
-                    return m_cheatData->fragments[idx].cheat;
-                }
+            if (m_actualHashes.items[index.row()].actualCheat.length() > 0) {
+                return m_actualHashes.items[index.row()].actualCheat;
+            } else if (m_actualHashes.items[index.row()].modded) {
+                return {};
+            } else {
+                return m_cheatData->table->items[index.row()].cheat;
             }
         }
     }
@@ -266,7 +221,7 @@ CheatPatcherModel::setData(const QModelIndex &index, const QVariant &value, int 
     if (!index.isValid()) {
         return false;
     }
-    auto [idxType, idx] = modelIndex2Idx(index);
+    const CarmHashCode_t &item = itemAtIndex(index);
     switch (role) {
     case Qt::EditRole:
         switch (index.column()) {
@@ -276,16 +231,9 @@ CheatPatcherModel::setData(const QModelIndex &index, const QVariant &value, int 
                 break;
             }
             bool cheatChanged = false;
-            switch (idxType) {
-            case CARM_CHEAT_VERIFY_TABLE_ITEM:
-                cheatChanged = m_actualHashes.tableItems[idx].updateCheat(newCheat);
-                break;
-            case CARM_CHEAT_VERIFY_FRAGMENT:
-                cheatChanged = m_actualHashes.fragmentItems[idx].updateCheat(newCheat);
-                break;
-            }
+            cheatChanged = m_actualHashes.items[index.row()].updateCheat(newCheat);
             if (cheatChanged) {
-                emit cheatUpdated(idxTypeIndexToString(idxType, idx), newCheat);
+                emit cheatUpdated(idxTypeIndexToString(item.type, item.cheatDataIndex), newCheat);
             }
             emit dataChanged(index, index, {Qt::DisplayRole, Qt::FontRole});
             emit dataChanged(createIndex(index.row(), COLUMN_CHEAT), createIndex(index.row(), COLUMN_CHEAT), {Qt::DisplayRole});
@@ -311,27 +259,22 @@ CheatPatcherModel::flags(const QModelIndex &index) const {
 const CarmHashCode_t &
 CheatPatcherModel::itemAtIndex(const QModelIndex &index) const {
     if (!index.isValid()) {
-        return m_actualHashes.fragmentItems[0];
+        return m_actualHashes.items[0];
     }
-    auto [idxType, idx] = modelIndex2Idx(index);
-    if (idxType == CARM_CHEAT_VERIFY_FRAGMENT) {
-        return m_actualHashes.fragmentItems[idx];
-    } else {
-        return m_actualHashes.tableItems[idx];
-    }
+    return m_actualHashes.items[index.row()];
+}
+
+const CarmHashCode_t &
+CheatPatcherModel::itemAtIndex(int i) const {
+    return itemAtIndex(createIndex(i, 0));
 }
 
 CarmHashCode_t &
 CheatPatcherModel::itemAtIndex(const QModelIndex &index) {
     if (!index.isValid()) {
-        return m_actualHashes.fragmentItems[0];
+        return m_actualHashes.items[0];
     }
-    auto [idxType, idx] = modelIndex2Idx(index);
-    if (idxType == CARM_CHEAT_VERIFY_FRAGMENT) {
-        return m_actualHashes.fragmentItems[idx];
-    } else {
-        return m_actualHashes.tableItems[idx];
-    }
+    return m_actualHashes.items[index.row()];
 }
 
 void
@@ -342,41 +285,37 @@ CheatPatcherModel::itemUndoChanges(QModelIndex &index) {
 }
 
 void
+CheatPatcherModel::itemUndoChanges(int i) {
+    auto index = createIndex(i, 0);
+    itemUndoChanges(index);
+}
+
+void
 CheatPatcherModel::itemSetDefault(QModelIndex &index) {
     auto &item = itemAtIndex(index);
     item.setDefault();
     emit dataChanged(createIndex(index.row(), 0), createIndex(index.row(), COLUMN_COUNT-1), {Qt::DisplayRole, Qt::FontRole});
 }
 
-QModelIndex
-CheatPatcherModel::idxToModelIndex(CarmCheatVerifyType idxType, size_t index) const {
-    switch (idxType) {
-    case CARM_CHEAT_VERIFY_FRAGMENT:
-        return createIndex(index, 0);
-    case CARM_CHEAT_VERIFY_TABLE_ITEM:
-        return createIndex(index + m_cheatData->nbFragments, 0);
-    }
-    return {};
+void
+CheatPatcherModel::itemSetDefault(int i) {
+    auto index = createIndex(i, 0);
+    itemSetDefault(index);
 }
 
 
 bool CheatPatcherModel::anyModified() const {
     bool anyModified = false;
-    for (int i = 0; i < m_actualHashes.fragmentItems.size(); i += 1) {
-        anyModified = anyModified || m_actualHashes.fragmentItems[i].modified;
-    }
-    for (int i = 0; i < m_actualHashes.tableItems.size(); i += 1) {
-        anyModified = anyModified || m_actualHashes.tableItems[i].modified;
+    for (int i = 0; i < m_actualHashes.items.size(); i += 1) {
+        anyModified = anyModified || m_actualHashes.items[i].modified;
     }
     return anyModified;
 }
+
 bool CheatPatcherModel::anyNonDefault() const {
     bool anyNonDefault = false;
-    for (int i = 0; i < m_actualHashes.fragmentItems.size(); i += 1) {
-        anyNonDefault = anyNonDefault || m_actualHashes.fragmentItems[i].differsFromDefault;
-    }
-    for (int i = 0; i < m_actualHashes.tableItems.size(); i += 1) {
-        anyNonDefault = anyNonDefault || m_actualHashes.tableItems[i].differsFromDefault;
+    for (int i = 0; i < m_actualHashes.items.size(); i += 1) {
+        anyNonDefault = anyNonDefault || m_actualHashes.items[i].modded;
     }
     return anyNonDefault;
 }
@@ -392,7 +331,7 @@ Carm2PatcherMainWindow::Carm2PatcherMainWindow() {
         this, [=]() {
             const auto &actualHash = m_model->itemAtIndex(m_ui->centralTable->selectionModel()->currentIndex());
             m_ui->undoItemAction->setEnabled(actualHash.modified);
-            m_ui->resetItemAction->setEnabled(actualHash.differsFromDefault);
+            m_ui->resetItemAction->setEnabled(actualHash.modded);
             m_ui->resetAllAction->setEnabled(m_model->anyNonDefault());
             m_ui->undoAllAction->setEnabled(m_model->anyModified());
             m_ui->saveAction->setEnabled(m_model->anyModified());
@@ -401,7 +340,7 @@ Carm2PatcherMainWindow::Carm2PatcherMainWindow() {
         this, [=](const auto &) {
             const auto &actualHash = m_model->itemAtIndex(m_ui->centralTable->selectionModel()->currentIndex());
             m_ui->undoItemAction->setEnabled(actualHash.modified);
-            m_ui->resetItemAction->setEnabled(actualHash.differsFromDefault);
+            m_ui->resetItemAction->setEnabled(actualHash.modded);
             m_ui->resetAllAction->setEnabled(m_model->anyNonDefault());
             m_ui->undoAllAction->setEnabled(m_model->anyModified());
             m_ui->saveAction->setEnabled(m_model->anyModified());
@@ -413,7 +352,7 @@ Carm2PatcherMainWindow::Carm2PatcherMainWindow() {
     connect(m_ui->centralTable->selectionModel(), &QItemSelectionModel::currentChanged,
         this, [=](const auto &index) {
             const auto &item = m_model->itemAtIndex(index);
-            m_ui->resetItemAction->setEnabled(item.differsFromDefault);
+            m_ui->resetItemAction->setEnabled(item.modded);
             m_ui->undoItemAction->setEnabled(item.modified);
         });
     m_ui->centralTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
@@ -441,13 +380,8 @@ Carm2PatcherMainWindow::Carm2PatcherMainWindow() {
     connect(m_ui->undoAllAction, &QAction::triggered,
         this, [=]() {
             const auto &actualHashes = m_model->getActualHashes();
-            for(int i = 0; i < actualHashes.fragmentItems.size(); i += 1) {
-                QModelIndex index = m_model->idxToModelIndex(CARM_CHEAT_VERIFY_FRAGMENT, i);
-                m_model->itemUndoChanges(index);
-            }
-            for(int i = 0; i < actualHashes.tableItems.size(); i += 1) {
-                QModelIndex index = m_model->idxToModelIndex(CARM_CHEAT_VERIFY_TABLE_ITEM, i);
-                m_model->itemUndoChanges(index);
+            for (int i = 0; i < actualHashes.items.size(); i += 1) {
+                m_model->itemUndoChanges(i);
             }
         });
     connect(m_ui->resetItemAction, &QAction::triggered,
@@ -458,13 +392,8 @@ Carm2PatcherMainWindow::Carm2PatcherMainWindow() {
     connect(m_ui->resetAllAction, &QAction::triggered,
         this, [=]() {
             const auto &actualHashes = m_model->getActualHashes();
-            for(int i = 0; i < actualHashes.fragmentItems.size(); i += 1) {
-                QModelIndex index = m_model->idxToModelIndex(CARM_CHEAT_VERIFY_FRAGMENT, i);
-                m_model->itemSetDefault(index);
-            }
-            for(int i = 0; i < actualHashes.tableItems.size(); i += 1) {
-                QModelIndex index = m_model->idxToModelIndex(CARM_CHEAT_VERIFY_TABLE_ITEM, i);
-                m_model->itemSetDefault(index);
+            for (int i = 0; i < actualHashes.items.size(); i += 1) {
+                m_model->itemSetDefault(i);
             }
         });
 
@@ -500,8 +429,7 @@ Carm2PatcherMainWindow::openExe(const QString &exePath) {
     const CarmGameCheats *cheatData = carm2_game_cheats();
 
     CarmActualHashCodes_t actualHashes;
-    actualHashes.tableItems.resize(cheatData->table->nbItems);
-    actualHashes.fragmentItems.resize(cheatData->nbFragments);
+    actualHashes.items.resize(cheatData->table->nbItems + cheatData->nbFragments);
     int fileMatches = carm_list_cheats(f, cheatData, collect_data_callback, &actualHashes);
     fclose(f);
     if (fileMatches != 0) {
@@ -523,13 +451,8 @@ void Carm2PatcherMainWindow::closeExe() {
 bool Carm2PatcherMainWindow::saveExe() {
     size_t nbModified = 0;
     const auto &actualHashes = m_model->getActualHashes();
-    for(int i = 0; i < actualHashes.fragmentItems.size(); i += 1) {
-        if (actualHashes.fragmentItems[i].modified) {
-            nbModified += 1;
-        }
-    }
-    for(int i = 0; i < actualHashes.tableItems.size(); i += 1) {
-        if (actualHashes.tableItems[i].modified) {
+    for (int i = 0; i < actualHashes.items.size(); i += 1) {
+        if (actualHashes.items[i].modified) {
             nbModified += 1;
         }
     }
@@ -544,20 +467,21 @@ bool Carm2PatcherMainWindow::saveExe() {
 
     auto *modifiers = alloc_CarmModifersType(nbModified);
     size_t idx = 0;
-    for (int i = 0; i < actualHashes.fragmentItems.size(); i += 1) {
-        if (actualHashes.fragmentItems[i].modified) {
+    for (size_t i = 0; i < m_cheatData->nbFragments; i += 1) {
+        if (actualHashes.items[i].modified) {
             modifiers->items[idx].type = CARM_CHEAT_VERIFY_FRAGMENT;
             modifiers->items[idx].index = i;
-            auto stdString = actualHashes.fragmentItems[i].cheat.toStdString();
+            auto stdString = actualHashes.items[i].actualCheat.toStdString();
             modifiers->items[idx].cheat = ::strdup(stdString.data());
             idx += 1;
         }
     }
-    for (int i = 0; i < actualHashes.tableItems.size(); i += 1) {
-        if (actualHashes.tableItems[i].modified) {
+    for (size_t i = 0; i < m_cheatData->table->nbItems; i += 1) {
+        int actualIndex = i + m_cheatData->nbFragments;
+        if (actualHashes.items[actualIndex].modified) {
             modifiers->items[idx].type = CARM_CHEAT_VERIFY_TABLE_ITEM;
             modifiers->items[idx].index = i;
-            auto stdString = actualHashes.tableItems[i].cheat.toStdString();
+            auto stdString = actualHashes.items[actualIndex].actualCheat.toStdString();
             modifiers->items[idx].cheat = ::strdup(stdString.data());
             idx += 1;
         }

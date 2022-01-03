@@ -13,13 +13,29 @@ struct CarmGameCheats;
 struct CarmActualHashCodes_t;
 
 struct CarmHashCode_t {
+    CarmHashCode_t() = default;
+    CarmHashCode_t(CarmCheatVerifyType type_, const c2_hash_t &fileHash_, const c2_hash_t &actualHash_,const c2_hash_t &defaultHash_,
+        const char *defaultCheat_, bool modded_)
+        : type(type_)
+        , fileHash(fileHash_)
+        , actualHash(actualHash_)
+        , defaultHash(defaultHash_)
+        , defaultCheat(defaultCheat_)
+        , modded(modded_) {
+    }
+    CarmCheatVerifyType type;
+    int cheatDataIndex{};
+
     c2_hash_t fileHash;
+
+    QString actualCheat{};
     c2_hash_t actualHash;
+
     c2_hash_t defaultHash;
     const char *defaultCheat;
-    bool differsFromDefault;
+
+    bool modded;
     bool modified = false;
-    QString cheat{};
 
     bool updateCheat(const QString &newCheat);
     void undoChanges();
@@ -27,8 +43,7 @@ struct CarmHashCode_t {
 };
 
 struct CarmActualHashCodes_t {
-    QVector<CarmHashCode_t> tableItems;
-    QVector<CarmHashCode_t> fragmentItems;
+    QVector<CarmHashCode_t> items;
 };
 
 class CheatPatcherModel : public QAbstractTableModel {
@@ -52,10 +67,13 @@ public:
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
     Qt::ItemFlags flags(const QModelIndex &index) const override;
     const CarmHashCode_t &itemAtIndex(const QModelIndex &) const;
+    const CarmHashCode_t &itemAtIndex(int) const;
     CarmHashCode_t &itemAtIndex(const QModelIndex &);
 
     void itemUndoChanges(QModelIndex &);
+    void itemUndoChanges(int);
     void itemSetDefault(QModelIndex &);
+    void itemSetDefault(int);
     const CarmActualHashCodes_t &getActualHashes() const { return m_actualHashes; }
     QModelIndex idxToModelIndex(CarmCheatVerifyType idxType, size_t index) const;
     bool anyModified() const;
