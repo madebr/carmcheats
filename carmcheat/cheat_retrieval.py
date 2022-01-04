@@ -50,11 +50,22 @@ def iterate_cribs(cribs, length, keep_order):
     return iterate_cribs_recursively(mask_result, cribs, keep_order)
 
 
+def database_contains_cheat(dbPath, cheatNeedle):
+    with open(dbPath, "r") as file:
+        entries = [line.strip() for line in file.readlines() if line.strip()]
+    for entry in entries:
+        hash_str, cheat = entry.rsplit(":", 1)
+        if cheat == cheatNeedle:
+            return True
+    return False
+
+
 def run(target_hash, length, crib_info, database, vowel_frequency=None,
         database_filename=None, check_intermediates=True, force=False):
     min_length, max_length = cheat_length_range(target_hash, texts=crib_info["cribs"])
     crib_iterator = iterate_cribs(crib_info["cribs"], length, crib_info["order"] == "keep")
     VOWELS = ["a", "e", "i", "o", "y"]
+    nbDuplicateCheatsFound = 0
     for crib_mask in crib_iterator:
         print(f"Trying crib mask '{''.join(c if c else '_' for c in crib_mask)}'")
         s = z3.Solver()
@@ -123,10 +134,18 @@ def run(target_hash, length, crib_info, database, vowel_frequency=None,
                 excluded_keycodes = keycodes
             database.append(cleartext)
             s.add(z3.Or(*[k != s.model()[k].as_long() for k in excluded_keycodes]))
-            print(f"{hash2str(target_hash)}:{cleartext}")
+            extraMsg = ""
             if database_filename:
-                with open(database_filename, "a") as fn:
-                    fn.write(f"{hash2str(target_hash)}:{cleartext}\n")
+                if database_contains_cheat(database_filename, cleartext):
+                    nbDuplicateCheatsFound += 1
+                    extraMsg = f" # cheat already in database! ({nbDuplicateCheatsFound} duplicates were found in this run)"
+                while True:
+                    # Try appending cheat to avoid losing a cheat because of parallel writes
+                    with open(database_filename, "a") as fn:
+                        fn.write(f"{hash2str(target_hash)}:{cleartext}\n")
+                    if database_contains_cheat(database_filename, cleartext):
+                        break
+            print(f"{hash2str(target_hash)}:{cleartext}{extraMsg}")
         if t == z3.unknown:
             return 1
     return 0

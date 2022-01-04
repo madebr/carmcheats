@@ -60,7 +60,7 @@ def hash2str(hash: typing.Tuple[int, int]) -> str:
 
 
 def str2hash(text: str) -> typing.Tuple[int, int]:
-    result = tuple(int(s, 16) for s in text.split(":"))
+    result = tuple(int(s, 16) for s in text.split(":", 1))
     if len(result) != 2 or any(c < 0 or c & 0xffffffff != c for c in result):
         raise ValueError("text is not a valid hash")
     return result
