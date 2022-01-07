@@ -103,8 +103,8 @@ def run(target_hash, length, crib_info, database, vowel_frequency=None,
         for k_i, k in enumerate(keycodes):
             if check_intermediates and (force or min_length <= k_i <= max_length):
                 # Calculate the final hash for each intermediate key code ==> string is shorter
-                final = z3_hash_final(code1, code2, sum)
-                intermediates.append(final)
+                intermediate_final = z3_hash_final(code1, code2, sum)
+                intermediates.append(intermediate_final)
             # One step of the hash
             code1, code2, sum = z3_hash_step(code1, code2, sum, k)
 
